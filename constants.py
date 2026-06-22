@@ -62,22 +62,37 @@ EXPECTED_SAMPLES_PER_CONDITION: Final[Dict[str, int]] = {
 HEALTHY_KEYWORDS: Final[Sequence[str]] = ("healthy", "normal", "control")
 MASLD_KEYWORDS: Final[Sequence[str]] = ("mash", "masld", "nash", "disease")
 
-CONSENSUS_PEAKS_OUTPUT_PATH = DERIVED_DATA_DIR / "consensus_peaks.bed"
-
-CONSENSUS_PEAKS_ANNOTATION_OUTPUT_PATH = DERIVED_DATA_DIR / "consensus_peaks_annotations.csv"
-
-CONSENSUS_PEAKS_SUMMARY_OUTPUT_PATH = DERIVED_DATA_DIR / "consensus_peaks_summary.csv"
+CONSENSUS_PEAKS_OUTPUT_PATH: Final[Path] = DERIVED_DATA_DIR / "consensus_peaks.bed"
+CONSENSUS_PEAKS_ANNOTATION_OUTPUT_PATH: Final[Path] = DERIVED_DATA_DIR / "consensus_peaks_annotations.csv"
+CONSENSUS_PEAKS_SUMMARY_OUTPUT_PATH: Final[Path] = DERIVED_DATA_DIR / "consensus_peaks_summary.csv"
 
 # True follows the default behavior of bedtools merge:
 # overlapping and directly adjacent ("book-ended") intervals are merged.
 MERGE_BOOKENDED_PEAKS = True
 
 REFERENCE_GRCH38_DIR: Final[Path] = DATA_DIR / "reference_grch38"
-
-BLACKLIST_BED_PATH = REFERENCE_GRCH38_DIR / "ENCFF356LFX.bed.gz"
-
-REPRODUCIBLE_CONSENSUS_PEAKS_OUTPUT_PATH = DERIVED_DATA_DIR / "reproducible_consensus_peaks.bed"
-
-REPRODUCIBLE_CONSENSUS_PEAKS_ANNOTATION_OUTPUT_PATH = DERIVED_DATA_DIR / "reproducible_consensus_peaks_annotations.csv"
+BLACKLIST_BED_PATH: Final[Path] = REFERENCE_GRCH38_DIR / "ENCFF356LFX.bed.gz"
+REPRODUCIBLE_CONSENSUS_PEAKS_OUTPUT_PATH: Final[Path] = DERIVED_DATA_DIR / "reproducible_consensus_peaks.bed"
+REPRODUCIBLE_CONSENSUS_PEAKS_ANNOTATION_OUTPUT_PATH: Final[Path] = DERIVED_DATA_DIR / "reproducible_consensus_peaks_annotations.csv"
 
 MIN_REPRODUCIBLE_SAMPLE_SUPPORT = 2
+
+RDS_PATH = ATAC_SEQ_DIR / "GSE281367_seurat_clustered.rds.gz"
+PREPROCESS_DIR = BASE_DIR / "preprocessing"
+SEURAT_INSPECTION_DIR = PREPROCESS_DIR / "inspecting_seurat"
+INSPECTION_DIR = DERIVED_DATA_DIR / "gse281367_rds_inspection"
+INSPECTION_DIR.mkdir(parents=True, exist_ok=True)
+R_SCRIPT_PATH = SEURAT_INSPECTION_DIR / "inspect_seurat_object.R"
+ANNOTATIONS_PATH: Final[Path] = INSPECTION_DIR / "GSE281367_cell_metadata.csv.gz"
+ANNOTATION_DIR: Final[Path] = INSPECTION_DIR / "gse281367_annotations"
+ANNOTATION_DIR.mkdir(parents=True, exist_ok=True)
+
+CELL_TYPE_STANDARDIZATION = {
+    "Hepatocytes": "Hepatocytes",
+    "EC": "Endothelial",
+    "NK": "T_NK_B",
+    "Kupffer": "Kupffer",
+    "Cholangiocyte": "Cholangiocyte",
+    "Stellate": "Stellate",
+    "Unknow": "Unknown",
+}
