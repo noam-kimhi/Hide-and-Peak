@@ -1,6 +1,8 @@
 from typing import Final, Sequence, Dict
 from pathlib import Path
 
+PLOT_DPI: Final[int] = 300
+
 BASE_DIR: Final[Path] = Path.cwd()
 DATA_DIR: Final[Path] = BASE_DIR / "data"
 
@@ -107,3 +109,22 @@ MATCHING_ANNOTATED_COLUMNS_DIR: Final[Path] = DERIVED_DATA_DIR / "gse281367_matc
 CELL_TYPE_MATRICES_DIR: Final[Path] = DERIVED_DATA_DIR / "gse281367_cell_type_matrices"
 CELL_TYPE_MATRICES_DIR.mkdir(parents=True, exist_ok=True)
 CELL_TYPE_MATRIX_SPLIT_SUMMARY_PATH: Final[Path] = CELL_TYPE_MATRICES_DIR / "split_summary.csv"
+
+BINARIZED_CELL_TYPE_MATRICES_DIR: Final[Path] = DERIVED_DATA_DIR / "gse281367_cell_type_matrices_binarized"
+BINARIZED_CELL_TYPE_MATRICES_DIR.mkdir(parents=True, exist_ok=True)
+MATRIX_BINARIZATION_SUMMARY_PATH: Final[Path] = BINARIZED_CELL_TYPE_MATRICES_DIR / "binarization_summary.csv"
+
+PSEUDOBULK_OUTPUT_DIR: Final[Path] = DERIVED_DATA_DIR / "pseudobulk"
+PSEUDOBULK_SUMMARY_PATH: Final[Path] = PSEUDOBULK_OUTPUT_DIR / "pseudobulk_summary.csv"
+
+PLOTS_MAIN_COLOR: Final[str] = '#f08423'
+
+MATRIX_BINARIZATION_PLOTS_DIR: Final[Path] = (
+    PREPROCESSING_RES_DIR
+    / "matrix_splitting"
+    / "binarization"
+)
+MATRIX_BINARIZATION_PLOTS_DIR.mkdir(
+    parents=True,
+    exist_ok=True,
+)
