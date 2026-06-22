@@ -260,6 +260,7 @@ def main() -> None:
                 "downloaded_barcodes",
                 "overlap",
                 "fraction_annotations_matched",
+                "fraction_downloaded_matched"
             ]
         ].to_string(index=False)
     )
