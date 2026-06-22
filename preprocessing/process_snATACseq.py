@@ -67,7 +67,7 @@ for i, row in enumerate(sample):
     print(f"peak {i:<5}" + "  ".join(f"{v:<6}" for v in row))
 
 # ── 4. Visualizations ─────────────────────────────────────────────────────────
-fig, axes = plt.subplots(2, 2, figsize=(12, 9))
+fig, axes = plt.subplots(2, 3, figsize=(18, 9))
 fig.suptitle("GSM8619363 MASH rep1 – snATAC-seq QC", fontsize=14, fontweight='bold')
 
 ax = axes[0, 0]
@@ -89,6 +89,19 @@ ax = axes[1, 1]
 ax.hist(peak_lengths, bins=60, color='mediumpurple', edgecolor='none')
 ax.set_xlabel("Peak length (bp)"); ax.set_ylabel("# peaks")
 ax.set_title("Peak length distribution")
+
+ax = axes[1, 2]
+vals, counts = np.unique(mat.data, return_counts=True)  # non-zero entries
+n_zeros = mat.shape[0] * mat.shape[1] - mat.nnz
+all_vals   = np.concatenate([[0], vals])
+all_counts = np.concatenate([[n_zeros], counts])
+ax.bar(all_vals, all_counts, color='tomato', edgecolor='black', linewidth=0.5)
+ax.set_xticks([0, 50, 100, 150, 200, 250])
+ax.set_xlabel("Matrix value"); ax.set_ylabel("Count (log scale)")
+ax.set_yscale('log')
+ax.set_title("Matrix value distribution (incl. zeros)")
+
+axes[0, 2].axis('off')  # unused 3rd column top cell
 
 plt.tight_layout()
 out_path = ATAC_SEQ_PREPROCESSING_RES_DIR / "snATAC_QC.png"

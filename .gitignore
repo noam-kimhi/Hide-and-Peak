@@ -12,3 +12,5 @@ data/snatac_gse281367/GSM8619367_MASH_rep5/GSM8619367_MASH_rep5_fragments.tsv.gz
 data/snatac_gse281367/GSM8619368_MASH_rep6/GSM8619368_MASH_rep6_fragments.tsv.gz
 data/snatac_gse281367/GSM8619369_Normal_rep1/GSM8619369_Normal_rep1_fragments.tsv.gz
 data/snatac_gse281367/GSM8619370_Normal_rep2/GSM8619370_Normal_rep2_fragments.tsv.gz
+# Download from `https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE281367` -- NOT AVAILABLE in Hillel's data.
+data/snatac_gse281367/GSE281367_seurat_clustered.rds.gz

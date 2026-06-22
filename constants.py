@@ -71,3 +71,13 @@ CONSENSUS_PEAKS_SUMMARY_OUTPUT_PATH = DERIVED_DATA_DIR / "consensus_peaks_summar
 # True follows the default behavior of bedtools merge:
 # overlapping and directly adjacent ("book-ended") intervals are merged.
 MERGE_BOOKENDED_PEAKS = True
+
+REFERENCE_GRCH38_DIR: Final[Path] = DATA_DIR / "reference_grch38"
+
+BLACKLIST_BED_PATH = REFERENCE_GRCH38_DIR / "ENCFF356LFX.bed.gz"
+
+REPRODUCIBLE_CONSENSUS_PEAKS_OUTPUT_PATH = DERIVED_DATA_DIR / "reproducible_consensus_peaks.bed"
+
+REPRODUCIBLE_CONSENSUS_PEAKS_ANNOTATION_OUTPUT_PATH = DERIVED_DATA_DIR / "reproducible_consensus_peaks_annotations.csv"
+
+MIN_REPRODUCIBLE_SAMPLE_SUPPORT = 2
