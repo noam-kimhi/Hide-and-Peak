@@ -3,6 +3,7 @@
 
 # Python
 .venv/
+__pycache__/
 
 # Too big data files
 data/snatac_gse281367/GSM8619363_MASH_rep1/GSM8619363_MASH_rep1_fragments.tsv.gz
