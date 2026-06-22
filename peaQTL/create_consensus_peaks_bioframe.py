@@ -17,6 +17,7 @@ from constants import (
     CONSENSUS_PEAKS_SUMMARY_OUTPUT_PATH,
     MERGE_BOOKENDED_PEAKS,
     MIN_REPRODUCIBLE_SAMPLE_SUPPORT,
+    PEAK_TO_CONSENSUS_MAP_OUTPUT_PATH,
     PEAKS_SUFFIX,
     REPRODUCIBLE_CONSENSUS_PEAKS_ANNOTATION_OUTPUT_PATH,
     REPRODUCIBLE_CONSENSUS_PEAKS_OUTPUT_PATH,
@@ -481,7 +482,7 @@ def remove_blacklisted_intervals(
 def merge_peaks(
     sorted_peaks: pd.DataFrame,
     merge_bookended_peaks: bool,
-) -> pd.DataFrame:
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Merge sample-specific peaks into consensus intervals using Bioframe.
 
@@ -496,7 +497,9 @@ def merge_peaks(
 
     :param sorted_peaks: Input peaks sorted by chromosome, start, and end.
     :param merge_bookended_peaks: Whether directly adjacent intervals are merged.
-    :return: Consensus peaks with interval length and sample-support statistics.
+    :return: Tuple of (consensus peaks with interval length and sample-support
+        statistics, clustered peaks DataFrame retaining the original per-peak
+        rows with their assigned cluster coordinates).
     """
     if sorted_peaks.empty:
         raise ValueError("Cannot merge an empty peak table.")
@@ -594,7 +597,7 @@ def merge_peaks(
         ]
     ]
 
-    return sort_genomic_intervals(consensus_peaks)
+    return sort_genomic_intervals(consensus_peaks), clustered_peaks
 
 
 def create_reproducible_consensus_peaks(
@@ -634,6 +637,92 @@ def create_reproducible_consensus_peaks(
         )
 
     return reproducible_peaks
+
+
+def create_peak_to_consensus_map(
+    clustered_peaks: pd.DataFrame,
+    sample_peak_files: Sequence[SamplePeakFile],
+    reproducible_consensus_peaks: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Build a mapping from each original sample-specific peak to the reproducible
+    consensus peak it was merged into.
+
+    Only input peaks whose cluster survived the reproducibility filter are
+    included. Peaks whose merged cluster was removed by the blacklist safety
+    check or did not reach the minimum sample support are excluded.
+
+    :param clustered_peaks: Pre-aggregation output of bf.cluster, containing
+        the original chrom/start/end/sample_index columns plus
+        cluster/cluster_start/cluster_end columns.
+    :param sample_peak_files: Ordered list of sample metadata used to recover
+        sample identifiers from integer indices.
+    :param reproducible_consensus_peaks: Filtered consensus peak table used to
+        select which clusters appear in the final reproducible set.
+    :return: DataFrame with columns sample_id, original_chrom, original_start,
+        original_end, consensus_chrom, consensus_start, consensus_end.
+    """
+    sample_id_by_index: dict[int, str] = {
+        spf.sample_index: spf.sample_id
+        for spf in sample_peak_files
+    }
+
+    # Build a lookup keyed by the cluster's merged coordinates so we can
+    # filter clustered_peaks to only reproducible clusters.
+    reproducible_keys = set(
+        zip(
+            reproducible_consensus_peaks["chrom"].astype(str),
+            reproducible_consensus_peaks["start"],
+            reproducible_consensus_peaks["end"],
+        )
+    )
+
+    cluster_key = list(
+        zip(
+            clustered_peaks["chrom"].astype(str),
+            clustered_peaks["cluster_start"],
+            clustered_peaks["cluster_end"],
+        )
+    )
+
+    reproducible_mask = np.array(
+        [k in reproducible_keys for k in cluster_key],
+        dtype=bool,
+    )
+
+    filtered = clustered_peaks.loc[reproducible_mask].copy()
+
+    filtered["sample_id"] = (
+        filtered["sample_index"]
+        .map(sample_id_by_index)
+        .astype("string")
+    )
+
+    filtered = filtered.rename(
+        columns={
+            "chrom": "original_chrom",
+            "start": "original_start",
+            "end": "original_end",
+            "cluster_start": "consensus_start",
+            "cluster_end": "consensus_end",
+        }
+    )
+
+    filtered["consensus_chrom"] = filtered["original_chrom"]
+
+    result = filtered[
+        [
+            "sample_id",
+            "original_chrom",
+            "original_start",
+            "original_end",
+            "consensus_chrom",
+            "consensus_start",
+            "consensus_end",
+        ]
+    ].reset_index(drop=True)
+
+    return result
 
 
 def create_peak_set_statistics(
@@ -817,13 +906,17 @@ def save_consensus_outputs(
     consensus_peaks: pd.DataFrame,
     reproducible_consensus_peaks: pd.DataFrame,
     summary: pd.DataFrame,
+    peak_to_consensus_map: pd.DataFrame,
 ) -> None:
     """
-    Save the full consensus, reproducible consensus, annotations, and summary.
+    Save the full consensus, reproducible consensus, annotations, summary,
+    and the per-input-peak-to-reproducible-consensus mapping.
 
     :param consensus_peaks: Final blacklist-filtered full consensus peak table.
     :param reproducible_consensus_peaks: Reproducible consensus peak subset.
     :param summary: One-row construction summary.
+    :param peak_to_consensus_map: Mapping from original sample peaks to their
+        reproducible consensus peak.
     """
     output_paths = (
         CONSENSUS_PEAKS_OUTPUT_PATH,
@@ -831,6 +924,7 @@ def save_consensus_outputs(
         CONSENSUS_PEAKS_SUMMARY_OUTPUT_PATH,
         REPRODUCIBLE_CONSENSUS_PEAKS_OUTPUT_PATH,
         REPRODUCIBLE_CONSENSUS_PEAKS_ANNOTATION_OUTPUT_PATH,
+        PEAK_TO_CONSENSUS_MAP_OUTPUT_PATH,
     )
 
     for output_path in output_paths:
@@ -863,6 +957,11 @@ def save_consensus_outputs(
 
     summary.to_csv(
         CONSENSUS_PEAKS_SUMMARY_OUTPUT_PATH,
+        index=False,
+    )
+
+    peak_to_consensus_map.to_csv(
+        PEAK_TO_CONSENSUS_MAP_OUTPUT_PATH,
         index=False,
     )
 
@@ -957,7 +1056,7 @@ def main() -> None:
         "non-blacklisted input peaks..."
     )
 
-    merged_consensus_peaks = merge_peaks(
+    merged_consensus_peaks, clustered_peaks = merge_peaks(
         sorted_peaks=non_blacklisted_input_peaks,
         merge_bookended_peaks=MERGE_BOOKENDED_PEAKS,
     )
@@ -979,6 +1078,12 @@ def main() -> None:
                 MIN_REPRODUCIBLE_SAMPLE_SUPPORT
             ),
         )
+    )
+
+    peak_to_consensus_map = create_peak_to_consensus_map(
+        clustered_peaks=clustered_peaks,
+        sample_peak_files=sample_peak_files,
+        reproducible_consensus_peaks=reproducible_consensus_peaks,
     )
 
     summary = create_consensus_summary(
@@ -1008,6 +1113,7 @@ def main() -> None:
             reproducible_consensus_peaks
         ),
         summary=summary,
+        peak_to_consensus_map=peak_to_consensus_map,
     )
 
     print_consensus_summary(summary)
@@ -1032,6 +1138,10 @@ def main() -> None:
     print(
         f"  Construction summary: "
         f"{CONSENSUS_PEAKS_SUMMARY_OUTPUT_PATH}"
+    )
+    print(
+        f"  Peak-to-consensus map: "
+        f"{PEAK_TO_CONSENSUS_MAP_OUTPUT_PATH}"
     )
 
 

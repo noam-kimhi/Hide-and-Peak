@@ -74,6 +74,7 @@ REFERENCE_GRCH38_DIR: Final[Path] = DATA_DIR / "reference_grch38"
 BLACKLIST_BED_PATH: Final[Path] = REFERENCE_GRCH38_DIR / "ENCFF356LFX.bed.gz"
 REPRODUCIBLE_CONSENSUS_PEAKS_OUTPUT_PATH: Final[Path] = DERIVED_DATA_DIR / "reproducible_consensus_peaks.bed"
 REPRODUCIBLE_CONSENSUS_PEAKS_ANNOTATION_OUTPUT_PATH: Final[Path] = DERIVED_DATA_DIR / "reproducible_consensus_peaks_annotations.csv"
+PEAK_TO_CONSENSUS_MAP_OUTPUT_PATH: Final[Path] = DERIVED_DATA_DIR / "peak_to_consensus_map.csv"
 
 MIN_REPRODUCIBLE_SAMPLE_SUPPORT = 2
 
@@ -83,9 +84,11 @@ SEURAT_INSPECTION_DIR = PREPROCESS_DIR / "inspecting_seurat"
 INSPECTION_DIR = DERIVED_DATA_DIR / "gse281367_rds_inspection"
 INSPECTION_DIR.mkdir(parents=True, exist_ok=True)
 R_SCRIPT_PATH = SEURAT_INSPECTION_DIR / "inspect_seurat_object.R"
-ANNOTATIONS_PATH: Final[Path] = INSPECTION_DIR / "GSE281367_cell_metadata.csv.gz"
+SEURAT_METADATA_PATH: Final[Path] = INSPECTION_DIR / "GSE281367_cell_metadata.csv.gz"
+ANNOTATIONS_PATH: Final[Path] = INSPECTION_DIR / "GSE281367_cell_annotations.csv.gz"
 ANNOTATION_DIR: Final[Path] = INSPECTION_DIR / "gse281367_annotations"
 ANNOTATION_DIR.mkdir(parents=True, exist_ok=True)
+CELL_ANNOTATIONS_PATH: Final[Path] = ANNOTATION_DIR / "GSE281367_cell_annotations.csv.gz"
 
 CELL_TYPE_STANDARDIZATION = {
     "Hepatocytes": "Hepatocytes",
@@ -96,3 +99,11 @@ CELL_TYPE_STANDARDIZATION = {
     "Stellate": "Stellate",
     "Unknow": "Unknown",
 }
+
+SAMPLE_MAPPING_PATH: Final[Path] = ANNOTATION_DIR / "sample_directory_mapping.csv"
+
+MATCHING_ANNOTATED_COLUMNS_DIR: Final[Path] = DERIVED_DATA_DIR / "gse281367_matched_columns"
+
+CELL_TYPE_MATRICES_DIR: Final[Path] = DERIVED_DATA_DIR / "gse281367_cell_type_matrices"
+CELL_TYPE_MATRICES_DIR.mkdir(parents=True, exist_ok=True)
+CELL_TYPE_MATRIX_SPLIT_SUMMARY_PATH: Final[Path] = CELL_TYPE_MATRICES_DIR / "split_summary.csv"
