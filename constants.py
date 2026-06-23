@@ -156,3 +156,157 @@ PEAK_FILTERING_SUMMARY_PATH: Final[Path] = FILTERED_CELL_TYPE_MATRICES_DIR / "pe
 MIN_PEAK_FILTER_GROUP_SIZE: Final[int] = 30
 MIN_PEAK_FILTER_CELL_SUPPORT: Final[int] = 3
 MIN_PEAK_FILTER_CELL_FRACTION: Final[float] = 0.005
+
+SIG_PEAKS_DIR: Final[Path] = DERIVED_DATA_DIR / "significant_peaks"
+SIG_PEAKS_DIR.mkdir(parents=True, exist_ok=True)
+UNFILTERED_SIG_PEAKS_DIR: Final[Path] = SIG_PEAKS_DIR / "unfiltered_significant_peaks"
+UNFILTERED_SIG_PEAKS_DIR.mkdir(parents=True, exist_ok=True)
+FILTERED_SIG_PEAKS_DIR: Final[Path] = SIG_PEAKS_DIR / "filtered_significant_peaks"
+FILTERED_SIG_PEAKS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+# ---------------------------------------------------------------------------
+# Exact GTEx liver eQTL overlap with filtered cell-type peaks
+# ---------------------------------------------------------------------------
+
+LIVER_EQTL_SIGNIFICANT_PAIRS_PATH: Final[Path] = (
+    EQTL_DIR / "Liver.v8.signif_variant_gene_pairs.txt.gz"
+)
+
+UNFILTERED_SIGNIFICANT_PEAKS_SUFFIX: Final[str] = (
+    "_significant_peaks.bed.gz"
+)
+
+FILTERED_SIGNIFICANT_PEAKS_SUFFIX: Final[str] = (
+    "_significant_peaks_without_eqtl.bed.gz"
+)
+
+SIGNIFICANT_PEAKS_EQTL_FILTERING_SUMMARY_PATH: Final[Path] = (
+    FILTERED_SIG_PEAKS_DIR
+    / "significant_peaks_eqtl_filtering_summary.csv"
+)
+
+# ---------------------------------------------------------------------------
+# DESeq2 differential-accessibility result analysis
+# ---------------------------------------------------------------------------
+
+PEAQTL_RESULTS_DIR: Final[Path] = RESULTS_DIR / "peaQTL"
+
+DESEQ2_RESULTS_DIR = PEAQTL_RESULTS_DIR / "differential_peaks"
+DESEQ2_RESULTS_SUFFIX = "_deseq2_results.csv"
+
+DESEQ2_ANALYSIS_DIR = DESEQ2_RESULTS_DIR / "analysis"
+DESEQ2_SUMMARY_CSV = (
+    DESEQ2_ANALYSIS_DIR / "deseq2_all_cell_types_summary.csv"
+)
+DESEQ2_THRESHOLD_GRID_CSV = (
+    DESEQ2_ANALYSIS_DIR / "deseq2_significance_threshold_grid.csv"
+)
+
+DESEQ2_PLOTS_DIR = DESEQ2_ANALYSIS_DIR / "plots"
+DESEQ2_PER_CELL_PLOTS_DIR = DESEQ2_PLOTS_DIR / "per_cell_type"
+
+# Thresholds examined in the summary tables.
+DESEQ2_PVALUE_THRESHOLDS = (
+    0.05,
+    0.01,
+    0.001,
+    0.0001,
+)
+
+DESEQ2_PADJ_THRESHOLDS = (
+    0.10,
+    0.05,
+    0.01,
+)
+
+DESEQ2_ABS_LOG2FC_THRESHOLDS = (
+    0.0,
+    0.25,
+    0.50,
+    0.58,
+    1.00,
+)
+
+DESEQ2_BASE_MEAN_THRESHOLDS = (
+    1.0,
+    5.0,
+    10.0,
+)
+
+# Default criterion used only for highlighting points and summary plots.
+# Final threshold selection can be changed after inspecting the results.
+DESEQ2_DEFAULT_PADJ_THRESHOLD = 0.05
+DESEQ2_DEFAULT_ABS_LOG2FC_THRESHOLD = 0.58
+
+# Plot settings.
+DESEQ2_PLOT_FORMAT = "png"
+DESEQ2_PVALUE_HISTOGRAM_BINS = 40
+DESEQ2_TOP_PEAK_LABELS = 8
+DESEQ2_MAX_NEG_LOG10_FOR_PLOTS = 50.0
+DESEQ2_MA_MAX_ABS_LOG2FC = 10.0
+
+DESEQ2_THRESHOLD_PLOT_ABS_LOG2FC_THRESHOLDS: Final[Sequence[float]] = (
+    0.0,
+    0.58,
+    1.0,
+)
+
+DESEQ2_TOP_FOREST_PEAKS: Final[int] = 20
+
+DESEQ2_POSITIVE_LFC_LABEL: Final[str] = "More accessible in MASLD"
+DESEQ2_NEGATIVE_LFC_LABEL: Final[str] = "More accessible in healthy"
+
+# ---------------------------------------------------------------------------
+# Sample-level support for differential peaks
+# ---------------------------------------------------------------------------
+
+DESEQ2_SAMPLE_SUPPORT_DIR: Final[Path] = (
+    DESEQ2_ANALYSIS_DIR / "sample_support"
+)
+
+DESEQ2_SAMPLE_SUPPORT_PLOTS_DIR: Final[Path] = (
+    DESEQ2_SAMPLE_SUPPORT_DIR / "plots"
+)
+
+DESEQ2_SAMPLE_SUPPORT_PER_CELL_PLOTS_DIR: Final[Path] = (
+    DESEQ2_SAMPLE_SUPPORT_PLOTS_DIR / "per_cell_type"
+)
+
+DESEQ2_SAMPLE_SUPPORT_SUMMARY_CSV: Final[Path] = (
+    DESEQ2_SAMPLE_SUPPORT_DIR
+    / "differential_peak_sample_support.csv"
+)
+
+DESEQ2_SAMPLE_SUPPORT_SIZE_FACTORS_CSV: Final[Path] = (
+    DESEQ2_SAMPLE_SUPPORT_DIR
+    / "pseudobulk_visualization_size_factors.csv"
+)
+
+# These samples must not participate in any statistics or plots.
+DESEQ2_EXCLUDED_SAMPLE_TOKENS: Final[Sequence[str]] = (
+    "Normal_rep4",
+    "Normal_rep6",
+)
+
+DESEQ2_EXPECTED_HEALTHY_SAMPLE_COUNT: Final[int] = 4
+DESEQ2_EXPECTED_MASLD_SAMPLE_COUNT: Final[int] = 6
+
+# Number of candidates included in the detailed plots.
+DESEQ2_SAMPLE_SUPPORT_TOP_PEAKS: Final[int] = 12
+DESEQ2_SAMPLE_SUPPORT_HEATMAP_PEAKS: Final[int] = 30
+DESEQ2_SAMPLE_SUPPORT_MAX_PEAK_LABELS: Final[int] = 8
+
+# Used only when calculating a descriptive log2 ratio of group means.
+DESEQ2_SAMPLE_SUPPORT_PSEUDOCOUNT: Final[float] = 0.5
+
+# Descriptive consistency thresholds. These do not replace padj.
+DESEQ2_SAMPLE_SUPPORT_STRONG_THRESHOLD: Final[float] = 0.80
+DESEQ2_SAMPLE_SUPPORT_MODERATE_THRESHOLD: Final[float] = 0.65
+
+DESEQ2_SAMPLE_SUPPORT_LOO_STRONG_THRESHOLD: Final[float] = 1.00
+DESEQ2_SAMPLE_SUPPORT_LOO_MODERATE_THRESHOLD: Final[float] = 0.80
+
+# Flag a group when one sample contributes more than this fraction of
+# the group's total normalized signal for a peak.
+DESEQ2_SAMPLE_SUPPORT_MAX_SAMPLE_SHARE_WARNING: Final[float] = 0.50
