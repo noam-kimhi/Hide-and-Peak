@@ -149,3 +149,10 @@ PEAK_FILTER_MIN_CELL_FRACTIONS: Final[Sequence[float]] = (
     0.02,
     0.05,
 )
+
+FILTERED_CELL_TYPE_MATRICES_DIR: Final[Path] = DERIVED_DATA_DIR / "gse281367_cell_type_matrices_filtered"
+FILTERED_CELL_TYPE_MATRICES_DIR.mkdir(parents=True, exist_ok=True)
+PEAK_FILTERING_SUMMARY_PATH: Final[Path] = FILTERED_CELL_TYPE_MATRICES_DIR / "peak_filtering_summary.csv"
+MIN_PEAK_FILTER_GROUP_SIZE: Final[int] = 30
+MIN_PEAK_FILTER_CELL_SUPPORT: Final[int] = 3
+MIN_PEAK_FILTER_CELL_FRACTION: Final[float] = 0.005

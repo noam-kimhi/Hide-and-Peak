@@ -3,7 +3,9 @@
 
 # Python
 .venv/
+# ignore __pycache__ folders in any subdirectory
 __pycache__/
+**/__pycache__/
 
 # Too big data files
 data/snatac_gse281367/GSM8619363_MASH_rep1/GSM8619363_MASH_rep1_fragments.tsv.gz
