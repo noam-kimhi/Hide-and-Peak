@@ -8,9 +8,16 @@ the script writes
 
     <cell_type>_significant_peaks_without_eqtl.bed.gz
 
-to ``FILTERED_SIG_PEAKS_DIR`` and also creates a pie chart describing the
-fraction of peaks that overlap at least one exact eQTL position versus the
-fraction that do not.
+to ``FILTERED_SIG_PEAKS_DIR`` and also creates:
+
+1. One pie chart per cell type showing the fraction of significant peaks that
+   overlap at least one exact liver eQTL position versus the fraction that do
+   not.
+2. A global bar plot with one bar per cell type plus one bar for the liver
+   eQTL set size.
+3. A second global bar plot with the same bars, plus a horizontal line inside
+   each cell-type bar indicating the number of eQTL-overlapping significant
+   peaks for that cell type.
 
 Run from the project root with:
 
@@ -59,6 +66,12 @@ BIOFRAME_END_COLUMN: Final[str] = "end"
 BIOFRAME_ROW_ID_COLUMN: Final[str] = "_original_row_id"
 
 PIE_CHART_SUFFIX: Final[str] = "_significant_peaks_eqtl_pie.png"
+TOTAL_COUNTS_BAR_PLOT_FILENAME: Final[str] = (
+    "significant_peaks_total_counts_and_eqtl_bar_plot.png"
+)
+TOTAL_COUNTS_WITH_OVERLAP_FILENAME: Final[str] = (
+    "significant_peaks_total_counts_with_eqtl_overlap_lines.png"
+)
 
 SUMMARY_COLUMNS: Final[Sequence[str]] = (
     "cell_type",
@@ -99,7 +112,6 @@ def normalize_chromosome(chromosome: object) -> str:
         return f"chr{upper_suffix}"
     if suffix.isdigit():
         return f"chr{int(suffix)}"
-
     return f"chr{suffix}"
 
 
@@ -114,8 +126,8 @@ def parse_gtex_variant_ids(variant_ids: pd.Series) -> pd.DataFrame:
     if parsed.shape[1] != 5:
         examples = ids.head(5).tolist()
         raise ValueError(
-            "Could not parse GTEx variant IDs into "
-            "chromosome, position, reference, alternate, and build fields. "
+            "Could not parse GTEx variant IDs into chromosome, position, "
+            "reference, alternate, and build fields. "
             f"Examples: {examples}"
         )
 
@@ -184,7 +196,7 @@ def load_eqtl_intervals(eqtl_path: Path) -> tuple[pd.DataFrame, int]:
         n_unique_variant_ids,
         len(eqtl_intervals),
     )
-    return eqtl_intervals, n_unique_variant_ids
+    return eqtl_intervals, len(eqtl_intervals)
 
 
 def read_bed_preserving_values(bed_path: Path) -> pd.DataFrame:
@@ -216,8 +228,8 @@ def read_bed_preserving_values(bed_path: Path) -> pd.DataFrame:
     if invalid_coordinate_mask.any():
         invalid_rows = invalid_coordinate_mask[invalid_coordinate_mask].index[:10].tolist()
         raise ValueError(
-            f"{bed_path} contains invalid BED coordinates at zero-based "
-            f"row indices {invalid_rows}."
+            f"{bed_path} contains invalid BED coordinates at zero-based row "
+            f"indices {invalid_rows}."
         )
 
     return bed
@@ -228,9 +240,7 @@ def build_bioframe_peak_table(peaks: pd.DataFrame) -> pd.DataFrame:
 
     return pd.DataFrame(
         {
-            BIOFRAME_CHROM_COLUMN: peaks.iloc[:, CHROM_COLUMN_INDEX].map(
-                normalize_chromosome
-            ),
+            BIOFRAME_CHROM_COLUMN: peaks.iloc[:, CHROM_COLUMN_INDEX].map(normalize_chromosome),
             BIOFRAME_START_COLUMN: pd.to_numeric(
                 peaks.iloc[:, START_COLUMN_INDEX],
                 errors="raise",
@@ -280,6 +290,32 @@ def write_summary_atomic(summary: pd.DataFrame, summary_path: Path) -> None:
             temporary_path.unlink()
 
 
+def make_temporary_plot_path(output_path: Path) -> Path:
+    """Create a temporary plot path that preserves the real image suffix."""
+
+    return output_path.with_name(f"{output_path.stem}.tmp{output_path.suffix}")
+
+
+def save_figure_atomic(figure: plt.Figure, output_path: Path) -> None:
+    """Save a Matplotlib figure atomically as PNG."""
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path = make_temporary_plot_path(output_path)
+
+    try:
+        figure.savefig(
+            temporary_path,
+            dpi=PLOT_DPI,
+            bbox_inches="tight",
+            format="png",
+        )
+        temporary_path.replace(output_path)
+    finally:
+        plt.close(figure)
+        if temporary_path.exists():
+            temporary_path.unlink()
+
+
 def create_pie_chart(
     pie_chart_path: Path,
     *,
@@ -289,46 +325,125 @@ def create_pie_chart(
 ) -> None:
     """Create a pie chart summarizing eQTL overlap for one cell type."""
 
-    pie_chart_path.parent.mkdir(parents=True, exist_ok=True)
-    temporary_path = pie_chart_path.with_name(
-        f"{pie_chart_path.stem}.tmp{pie_chart_path.suffix}"
+    figure = plt.figure(figsize=(6, 6))
+    if n_eqtl_overlap + n_without_eqtl == 0:
+        plt.text(0.5, 0.5, "No significant peaks", ha="center", va="center", fontsize=14)
+        plt.axis("off")
+    else:
+        plt.pie(
+            [n_eqtl_overlap, n_without_eqtl],
+            labels=["Overlaps eQTL", "No eQTL overlap"],
+            autopct="%1.1f%%",
+            startangle=90,
+        )
+        plt.axis("equal")
+
+    plt.title(f"{cell_type}: significant peaks vs. liver eQTL overlap")
+    plt.tight_layout()
+    save_figure_atomic(figure, pie_chart_path)
+
+
+def add_bar_value_labels(ax: plt.Axes, heights: Sequence[int]) -> None:
+    """Add value labels above bars."""
+
+    upper_limit = max(heights) if heights else 0
+    offset = max(upper_limit * 0.01, 1.0)
+    for x_position, height in enumerate(heights):
+        ax.text(
+            x_position,
+            height + offset,
+            f"{int(height)}",
+            ha="center",
+            va="bottom",
+            fontsize=9,
+            rotation=0,
+        )
+
+
+def create_total_counts_bar_plot(
+    summary: pd.DataFrame,
+    *,
+    n_unique_eqtl_positions: int,
+    output_path: Path,
+) -> None:
+    """Create the global total-count bar plot requested by the user."""
+
+    ordered = summary.sort_values("cell_type", kind="stable").reset_index(drop=True)
+    categories = ordered["cell_type"].tolist() + ["eQTL"]
+    heights = ordered["n_input_significant_peaks"].astype(int).tolist() + [
+        int(n_unique_eqtl_positions)
+    ]
+
+    figure, ax = plt.subplots(figsize=(max(8, len(categories) * 1.1), 6))
+    ax.bar(range(len(categories)), heights)
+    ax.set_xticks(range(len(categories)))
+    ax.set_xticklabels(categories, rotation=45, ha="right")
+    ax.set_ylabel("Total interval count")
+    ax.set_xlabel("Cell type / reference set")
+    ax.set_title("Total significant-peak counts by cell type and liver eQTL set size")
+    add_bar_value_labels(ax, heights)
+    figure.tight_layout()
+    save_figure_atomic(figure, output_path)
+
+
+def create_total_counts_with_overlap_lines_plot(
+    summary: pd.DataFrame,
+    *,
+    n_unique_eqtl_positions: int,
+    output_path: Path,
+) -> None:
+    """Create the second global bar plot with internal eQTL-overlap lines."""
+
+    ordered = summary.sort_values("cell_type", kind="stable").reset_index(drop=True)
+    categories = ordered["cell_type"].tolist() + ["eQTL"]
+    total_heights = ordered["n_input_significant_peaks"].astype(int).tolist() + [
+        int(n_unique_eqtl_positions)
+    ]
+    overlap_counts = ordered["n_removed_eqtl_overlapping_peaks"].astype(int).tolist()
+
+    figure, ax = plt.subplots(figsize=(max(8, len(categories) * 1.1), 6))
+    bars = ax.bar(range(len(categories)), total_heights)
+    ax.set_xticks(range(len(categories)))
+    ax.set_xticklabels(categories, rotation=45, ha="right")
+    ax.set_ylabel("Total interval count")
+    ax.set_xlabel("Cell type / reference set")
+    ax.set_title(
+        "Total significant-peak counts with eQTL-overlapping peak counts per cell type"
     )
 
-    figure = plt.figure(figsize=(6, 6))
-    try:
-        if n_eqtl_overlap + n_without_eqtl == 0:
-            plt.text(
-                0.5,
-                0.5,
-                "No significant peaks",
-                ha="center",
-                va="center",
-                fontsize=14,
-            )
-            plt.axis("off")
-        else:
-            plt.pie(
-                [n_eqtl_overlap, n_without_eqtl],
-                labels=["Overlaps eQTL", "No eQTL overlap"],
-                autopct="%1.1f%%",
-                startangle=90,
-            )
-            plt.axis("equal")
+    add_bar_value_labels(ax, total_heights)
 
-        plt.title(f"{cell_type}: significant peaks vs. liver eQTL overlap")
-        plt.legend()
-        plt.tight_layout()
-        figure.savefig(
-            temporary_path,
-            dpi=PLOT_DPI,
-            bbox_inches="tight",
-            format=pie_chart_path.suffix.lstrip("."),
+    added_legend_label = False
+    for index, overlap_count in enumerate(overlap_counts):
+        bar = bars[index]
+        left_x = bar.get_x()
+        right_x = left_x + bar.get_width()
+        label = "eQTL-overlapping peaks" if not added_legend_label else None
+        ax.hlines(
+            y=overlap_count,
+            xmin=left_x,
+            xmax=right_x,
+            linewidth=2.0,
+            label=label,
         )
-        temporary_path.replace(pie_chart_path)
-    finally:
-        plt.close(figure)
-        if temporary_path.exists():
-            temporary_path.unlink()
+        added_legend_label = True
+
+        vertical_offset = max(max(total_heights) * 0.01, 1.0)
+        text_y = min(overlap_count + vertical_offset, bar.get_height() - vertical_offset)
+        ax.text(
+            bar.get_x() + bar.get_width() / 2.0,
+            text_y,
+            str(int(overlap_count)),
+            ha="center",
+            va="bottom" if text_y >= overlap_count else "top",
+            fontsize=9,
+        )
+
+    if added_legend_label:
+        ax.legend()
+
+    figure.tight_layout()
+    save_figure_atomic(figure, output_path)
 
 
 def discover_input_files(input_dir: Path) -> list[Path]:
@@ -356,17 +471,12 @@ def discover_input_files(input_dir: Path) -> list[Path]:
         for path in input_paths
     ]
     empty_cell_types = [
-        path.name
-        for path, cell_type in zip(input_paths, cell_types)
-        if not cell_type
+        path.name for path, cell_type in zip(input_paths, cell_types) if not cell_type
     ]
     if empty_cell_types:
-        raise ValueError(
-            f"Could not infer cell types from filenames: {empty_cell_types}"
-        )
+        raise ValueError(f"Could not infer cell types from filenames: {empty_cell_types}")
     if len(cell_types) != len(set(cell_types)):
         raise ValueError("Multiple input files resolve to the same cell-type name.")
-
     return input_paths
 
 
@@ -382,6 +492,15 @@ def make_pie_chart_path(cell_type: str, plots_dir: Path) -> Path:
     """Construct the pie-chart path for one cell type."""
 
     return plots_dir / f"{cell_type}{PIE_CHART_SUFFIX}"
+
+
+def get_global_plot_paths(plots_dir: Path) -> tuple[Path, Path]:
+    """Return the two requested global plot paths."""
+
+    return (
+        plots_dir / TOTAL_COUNTS_BAR_PLOT_FILENAME,
+        plots_dir / TOTAL_COUNTS_WITH_OVERLAP_FILENAME,
+    )
 
 
 def validate_output_paths(
@@ -405,6 +524,11 @@ def validate_output_paths(
         if pie_chart_path.exists():
             existing_paths.append(pie_chart_path)
 
+    total_counts_plot_path, overlap_lines_plot_path = get_global_plot_paths(plots_dir)
+    if total_counts_plot_path.exists():
+        existing_paths.append(total_counts_plot_path)
+    if overlap_lines_plot_path.exists():
+        existing_paths.append(overlap_lines_plot_path)
     if summary_path.exists():
         existing_paths.append(summary_path)
 
@@ -442,12 +566,8 @@ def process_peak_file(
             cols1=(BIOFRAME_CHROM_COLUMN, BIOFRAME_START_COLUMN, BIOFRAME_END_COLUMN),
             cols2=(BIOFRAME_CHROM_COLUMN, BIOFRAME_START_COLUMN, BIOFRAME_END_COLUMN),
         )
-
         retained_row_ids = (
-            filtered_intervals[BIOFRAME_ROW_ID_COLUMN]
-            .astype("int64")
-            .sort_values()
-            .to_numpy()
+            filtered_intervals[BIOFRAME_ROW_ID_COLUMN].astype("int64").sort_values().to_numpy()
         )
         filtered_original = original_peaks.iloc[retained_row_ids].copy()
 
@@ -502,7 +622,9 @@ def run(overwrite: bool = False) -> pd.DataFrame:
         overwrite=overwrite,
     )
 
-    eqtl_intervals, _ = load_eqtl_intervals(LIVER_EQTL_SIGNIFICANT_PAIRS_PATH)
+    eqtl_intervals, n_unique_eqtl_positions = load_eqtl_intervals(
+        LIVER_EQTL_SIGNIFICANT_PAIRS_PATH
+    )
 
     records = [
         process_peak_file(
@@ -518,7 +640,6 @@ def run(overwrite: bool = False) -> pd.DataFrame:
         "cell_type",
         kind="stable",
     )
-
     write_summary_atomic(summary, SIGNIFICANT_PEAKS_EQTL_FILTERING_SUMMARY_PATH)
 
     total_input = int(summary["n_input_significant_peaks"].sum())
@@ -528,15 +649,31 @@ def run(overwrite: bool = False) -> pd.DataFrame:
     if total_input != total_removed + total_output:
         raise RuntimeError("Dataset-wide peak-count integrity check failed.")
 
+    total_counts_plot_path, overlap_lines_plot_path = get_global_plot_paths(
+        SIGNIFICANT_PEAKS_EQTL_PLOTS_DIR
+    )
+    create_total_counts_bar_plot(
+        summary,
+        n_unique_eqtl_positions=n_unique_eqtl_positions,
+        output_path=total_counts_plot_path,
+    )
+    create_total_counts_with_overlap_lines_plot(
+        summary,
+        n_unique_eqtl_positions=n_unique_eqtl_positions,
+        output_path=overlap_lines_plot_path,
+    )
+
     LOGGER.info(
         "Completed %d cell types: retained %d/%d peaks; removed %d (%.2f%%). "
-        "Summary: %s",
+        "Summary: %s | Global plots: %s ; %s",
         len(summary),
         total_output,
         total_input,
         total_removed,
         100.0 * total_removed / total_input if total_input else 0.0,
         SIGNIFICANT_PEAKS_EQTL_FILTERING_SUMMARY_PATH,
+        total_counts_plot_path,
+        overlap_lines_plot_path,
     )
     return summary
 
@@ -546,8 +683,8 @@ def parse_arguments() -> argparse.Namespace:
 
     parser = argparse.ArgumentParser(
         description=(
-            "Remove significant peaks that overlap exact GTEx liver "
-            "eQTL positions and create one pie chart per cell type."
+            "Remove significant peaks that overlap exact GTEx liver eQTL "
+            "positions and create pie charts plus two summary bar plots."
         )
     )
     parser.add_argument(

@@ -306,6 +306,26 @@ DESEQ2_SAMPLE_SUPPORT_MAX_SAMPLE_SHARE_WARNING: Final[float] = 0.50
 # High-confidence significant peaks per cell type
 # ---------------------------------------------------------------------------
 
+# The number of cell-type BED files that must be produced.
+SIGNIFICANT_PEAK_EXPECTED_CELL_TYPE_COUNT: Final[int] = 7
+
+# Contribution of a tied Healthy–MASLD sample comparison to pairwise support:
+# 0.0 = no support, 0.5 = half support, 1.0 = full support.
+SIGNIFICANT_PEAK_PAIRWISE_TIE_WEIGHT: Final[float] = 0.5
+
+# Accepted names for the peak-ID column in pseudobulk CSV files.
+SIGNIFICANT_PEAK_PSEUDOBULK_PEAK_COLUMN_CANDIDATES: Final[
+    Sequence[str]
+] = (
+    "peak_id",
+    "peak",
+    "region",
+)
+
+# When no recognized peak-column name exists, accept the first column only
+# if at least this fraction of its values match "chrom:start-end".
+SIGNIFICANT_PEAK_MIN_PEAK_ID_MATCH_FRACTION: Final[float] = 0.90
+
 SIGNIFICANT_PEAK_CELL_TYPES: Final[Sequence[str]] = (
     "Cholangiocyte",
     "Endothelial",
@@ -316,6 +336,8 @@ SIGNIFICANT_PEAK_CELL_TYPES: Final[Sequence[str]] = (
     "Unknown",
 )
 
+# ---------------------------------------------------------------------------
 # ABC
+# ---------------------------------------------------------------------------
 ABC_DATA_DIR: Final[Path] = DATA_DIR / "ABC"
-ABC_PRED_FILE: Final[Path] = ABC_DATA_DIR / "AllPredictions.AvgHiC.ABC0.015.minus150.ForABCPaperV3.txt"
+ABC_PRED_FILE: Final[Path] = ABC_DATA_DIR / "AllPredictions.AvgHiC.ABC0.015.minus150.ForABCPaperV3.txt.gz"
