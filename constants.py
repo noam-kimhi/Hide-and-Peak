@@ -348,3 +348,5 @@ ABC_PRED_FILE: Final[Path] = ABC_DATA_DIR / "AllPredictions.AvgHiC.ABC0.015.minu
 ABC_DICT_PATH: Final[Path] = ABC_DATA_DIR / "Stanford_ABC_Liver_Dictionary.csv"
 PEAK2GENE_OUTPUT_DIR: Final[Path] = PEAQTL_RESULTS_DIR / "peak2gene"
 PEAK2GENE_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+SOFT_PEAK2GENE_OUTPUT_DIR: Final[Path] = PEAQTL_RESULTS_DIR / "soft_peak2gene"
+SOFT_PEAK2GENE_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
