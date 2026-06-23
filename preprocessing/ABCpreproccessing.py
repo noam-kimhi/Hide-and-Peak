@@ -1,3 +1,15 @@
+"""Create the liver ABC dictionary used by peak-to-gene analyses.
+
+The script reads the compressed ABC prediction table configured in constants,
+keeps rows with liver or hepatocyte cell-type labels and ABC scores at the
+existing threshold, renames the chromosome column to ``chrom``, and writes the
+filtered CSV under the ABC data directory.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Final
 import logging
 import pandas as pd
 from constants import ABC_PRED_FILE, ABC_DATA_DIR
@@ -9,13 +21,19 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-REQUIRED_COLUMNS = ["chr", "start", "end", "TargetGene", "CellType", "ABC.Score"]
-OUTPUT_PATH = ABC_DATA_DIR / "Stanford_ABC_Liver_Dictionary.csv"
-ABC_SCORE_THRESHOLD = 0.02
-LIVER_KEYWORDS = ("liver", "hepatocyte")
+REQUIRED_COLUMNS: Final[list[str]] = ["chr", "start", "end", "TargetGene", "CellType", "ABC.Score"]
+OUTPUT_PATH: Final[Path] = ABC_DATA_DIR / "Stanford_ABC_Liver_Dictionary.csv"
+ABC_SCORE_THRESHOLD: Final[float] = 0.02
+LIVER_KEYWORDS: Final[tuple[str, str]] = ("liver", "hepatocyte")
 
 
-def load_abc_predictions(path) -> pd.DataFrame:
+def load_abc_predictions(path: Path) -> pd.DataFrame:
+    """
+    Load selected columns from the compressed ABC prediction table.
+
+    :param path: Path to the gzip-compressed ABC prediction TSV file.
+    :return: DataFrame containing the required ABC columns.
+    """
     logger.info("Loading file: %s", path)
     df = pd.read_csv(
         path,
@@ -59,7 +77,13 @@ def rename_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df.rename(columns={"chr": "chrom"})
 
 
-def save_output(df: pd.DataFrame, path) -> None:
+def save_output(df: pd.DataFrame, path: Path) -> None:
+    """
+    Write the filtered ABC dictionary CSV.
+
+    :param df: Filtered ABC prediction rows to write.
+    :param path: Destination CSV path.
+    """
     logger.info("Saving %d rows to: %s", len(df), path)
     df.to_csv(path, index=False)
     logger.info("Done.")

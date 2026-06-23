@@ -1,5 +1,9 @@
+"""Print validation summaries for generated pseudobulk count tables.
 
-
+The script reads one pseudobulk CSV per standardized cell type, reports
+per-sample totals and cross-sample correlations, and prints an aggregate summary
+without writing new files.
+"""
 from __future__ import annotations
 
 import sys
@@ -17,7 +21,6 @@ from scipy.stats import spearmanr
 from constants import (
     CELL_TYPE_STANDARDIZATION,
     PSEUDOBULK_OUTPUT_DIR,
-    PSEUDOBULK_SUMMARY_PATH,
 )
 
 # --------------------------------------------------------------------------- #

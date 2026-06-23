@@ -22,7 +22,6 @@ valid empty ``.bed.gz`` files for cell types with no qualifying peaks.
 from __future__ import annotations
 
 import gzip
-import math
 import re
 from dataclasses import dataclass
 from pathlib import Path

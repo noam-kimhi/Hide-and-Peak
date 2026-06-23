@@ -1,3 +1,10 @@
+"""Run sample-level QC and consensus-support summaries for snATAC-seq inputs.
+
+The module expects one directory per configured sample with barcode, peak BED,
+Matrix Market, and fragment files. It reads BED intervals as zero-based
+half-open coordinates and writes QC summary CSVs under ``data/derived``.
+"""
+
 from __future__ import annotations
 
 import gzip

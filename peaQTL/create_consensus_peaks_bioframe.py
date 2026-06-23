@@ -1,3 +1,11 @@
+"""Build consensus and reproducible consensus peak sets with Bioframe.
+
+The script reads sample peak BED files, interprets intervals as zero-based
+half-open coordinates, optionally removes blacklist overlaps, maps original
+peaks to consensus intervals, and writes BED, annotation, summary, and mapping
+outputs under the derived data directory.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

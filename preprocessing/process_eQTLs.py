@@ -1,3 +1,11 @@
+"""Print basic shape, columns, and example rows from the GTEx liver eQTL table.
+
+This exploratory script reads the compressed significant variant-gene-pair file
+configured by ``EQTL_DIR`` and only prints summary information.
+"""
+
+from __future__ import annotations
+
 import gzip
 from constants import EQTL_DIR
 

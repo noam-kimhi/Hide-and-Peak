@@ -1,6 +1,5 @@
 """Inspect the processed GSE281367 Seurat object using R."""
 
-from pathlib import Path
 import shutil
 import subprocess
 from constants import *
