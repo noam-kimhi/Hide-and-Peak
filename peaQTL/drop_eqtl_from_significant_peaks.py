@@ -8,12 +8,9 @@ the script writes
 
     <cell_type>_significant_peaks_without_eqtl.bed.gz
 
-to ``FILTERED_SIG_PEAKS_DIR``.
-
-A complete input peak is removed when it overlaps at least one significant
-GTEx liver eQTL position. GTEx b38 variant positions are converted from
-one-based coordinates to one-base, zero-based BED intervals [position-1,
-position). Peaks are never shortened or split.
+to ``FILTERED_SIG_PEAKS_DIR`` and also creates a pie chart describing the
+fraction of peaks that overlap at least one exact eQTL position versus the
+fraction that do not.
 
 Run from the project root with:
 
@@ -31,13 +28,16 @@ from pathlib import Path
 from typing import Final, Sequence
 
 import bioframe
+import matplotlib.pyplot as plt
 import pandas as pd
 
 from constants import (
     FILTERED_SIG_PEAKS_DIR,
     FILTERED_SIGNIFICANT_PEAKS_SUFFIX,
     LIVER_EQTL_SIGNIFICANT_PAIRS_PATH,
+    PLOT_DPI,
     SIGNIFICANT_PEAKS_EQTL_FILTERING_SUMMARY_PATH,
+    SIGNIFICANT_PEAKS_EQTL_PLOTS_DIR,
     UNFILTERED_SIG_PEAKS_DIR,
     UNFILTERED_SIGNIFICANT_PEAKS_SUFFIX,
 )
@@ -58,10 +58,13 @@ BIOFRAME_START_COLUMN: Final[str] = "start"
 BIOFRAME_END_COLUMN: Final[str] = "end"
 BIOFRAME_ROW_ID_COLUMN: Final[str] = "_original_row_id"
 
+PIE_CHART_SUFFIX: Final[str] = "_significant_peaks_eqtl_pie.png"
+
 SUMMARY_COLUMNS: Final[Sequence[str]] = (
     "cell_type",
     "input_file",
     "output_file",
+    "pie_chart_file",
     "n_input_significant_peaks",
     "n_removed_eqtl_overlapping_peaks",
     "n_significant_peaks_without_eqtl",
@@ -79,11 +82,7 @@ def configure_logging(log_level: str) -> None:
 
 
 def normalize_chromosome(chromosome: object) -> str:
-    """Convert common chromosome spellings to a canonical ``chr*`` form.
-
-    The normalization is used only for interval matching. Original BED
-    chromosome values are preserved in the written output.
-    """
+    """Convert common chromosome spellings to a canonical ``chr*`` form."""
 
     value = str(chromosome).strip()
     if not value:
@@ -101,20 +100,11 @@ def normalize_chromosome(chromosome: object) -> str:
     if suffix.isdigit():
         return f"chr{int(suffix)}"
 
-    # Preserve non-standard contig text after ensuring one ``chr`` prefix.
     return f"chr{suffix}"
 
 
 def parse_gtex_variant_ids(variant_ids: pd.Series) -> pd.DataFrame:
-    """Parse GTEx variant IDs and return unique one-base GRCh38 intervals.
-
-    Expected variant format:
-
-        chr1_14677_G_A_b38
-
-    The split is performed from the right so that chromosome/contig names
-    containing underscores remain parseable.
-    """
+    """Parse GTEx variant IDs and return unique one-base GRCh38 intervals."""
 
     ids = variant_ids.astype("string").str.strip()
     if ids.isna().any() or (ids == "").any():
@@ -157,26 +147,16 @@ def parse_gtex_variant_ids(variant_ids: pd.Series) -> pd.DataFrame:
     positions = positions.astype("int64")
     intervals = pd.DataFrame(
         {
-            BIOFRAME_CHROM_COLUMN: parsed["chrom_raw"].map(
-                normalize_chromosome
-            ),
+            BIOFRAME_CHROM_COLUMN: parsed["chrom_raw"].map(normalize_chromosome),
             BIOFRAME_START_COLUMN: positions - 1,
             BIOFRAME_END_COLUMN: positions,
         }
     )
 
-    # Several significant variant-gene pairs can refer to the same variant,
-    # and multiple alleles can share a genomic position. For peak removal,
-    # one interval per genomic position is sufficient.
     intervals = intervals.drop_duplicates(
-        subset=(
-            BIOFRAME_CHROM_COLUMN,
-            BIOFRAME_START_COLUMN,
-            BIOFRAME_END_COLUMN,
-        ),
+        subset=(BIOFRAME_CHROM_COLUMN, BIOFRAME_START_COLUMN, BIOFRAME_END_COLUMN),
         keep="first",
     ).reset_index(drop=True)
-
     return intervals
 
 
@@ -229,27 +209,12 @@ def read_bed_preserving_values(bed_path: Path) -> pd.DataFrame:
             f"{BED_MIN_COLUMNS} BED columns."
         )
 
-    starts = pd.to_numeric(
-        bed.iloc[:, START_COLUMN_INDEX],
-        errors="coerce",
-    )
-    ends = pd.to_numeric(
-        bed.iloc[:, END_COLUMN_INDEX],
-        errors="coerce",
-    )
+    starts = pd.to_numeric(bed.iloc[:, START_COLUMN_INDEX], errors="coerce")
+    ends = pd.to_numeric(bed.iloc[:, END_COLUMN_INDEX], errors="coerce")
 
-    invalid_coordinate_mask = (
-        starts.isna()
-        | ends.isna()
-        | (starts < 0)
-        | (ends <= starts)
-    )
+    invalid_coordinate_mask = starts.isna() | ends.isna() | (starts < 0) | (ends <= starts)
     if invalid_coordinate_mask.any():
-        invalid_rows = (
-            invalid_coordinate_mask[invalid_coordinate_mask]
-            .index[:10]
-            .tolist()
-        )
+        invalid_rows = invalid_coordinate_mask[invalid_coordinate_mask].index[:10].tolist()
         raise ValueError(
             f"{bed_path} contains invalid BED coordinates at zero-based "
             f"row indices {invalid_rows}."
@@ -301,10 +266,7 @@ def write_bed_atomic(bed: pd.DataFrame, output_path: Path) -> None:
             temporary_path.unlink()
 
 
-def write_summary_atomic(
-    summary: pd.DataFrame,
-    summary_path: Path,
-) -> None:
+def write_summary_atomic(summary: pd.DataFrame, summary_path: Path) -> None:
     """Write the CSV summary atomically."""
 
     summary_path.parent.mkdir(parents=True, exist_ok=True)
@@ -314,6 +276,57 @@ def write_summary_atomic(
         summary.to_csv(temporary_path, index=False)
         temporary_path.replace(summary_path)
     finally:
+        if temporary_path.exists():
+            temporary_path.unlink()
+
+
+def create_pie_chart(
+    pie_chart_path: Path,
+    *,
+    cell_type: str,
+    n_eqtl_overlap: int,
+    n_without_eqtl: int,
+) -> None:
+    """Create a pie chart summarizing eQTL overlap for one cell type."""
+
+    pie_chart_path.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path = pie_chart_path.with_name(
+        f"{pie_chart_path.stem}.tmp{pie_chart_path.suffix}"
+    )
+
+    figure = plt.figure(figsize=(6, 6))
+    try:
+        if n_eqtl_overlap + n_without_eqtl == 0:
+            plt.text(
+                0.5,
+                0.5,
+                "No significant peaks",
+                ha="center",
+                va="center",
+                fontsize=14,
+            )
+            plt.axis("off")
+        else:
+            plt.pie(
+                [n_eqtl_overlap, n_without_eqtl],
+                labels=["Overlaps eQTL", "No eQTL overlap"],
+                autopct="%1.1f%%",
+                startangle=90,
+            )
+            plt.axis("equal")
+
+        plt.title(f"{cell_type}: significant peaks vs. liver eQTL overlap")
+        plt.legend()
+        plt.tight_layout()
+        figure.savefig(
+            temporary_path,
+            dpi=PLOT_DPI,
+            bbox_inches="tight",
+            format=pie_chart_path.suffix.lstrip("."),
+        )
+        temporary_path.replace(pie_chart_path)
+    finally:
+        plt.close(figure)
         if temporary_path.exists():
             temporary_path.unlink()
 
@@ -328,9 +341,7 @@ def discover_input_files(input_dir: Path) -> list[Path]:
 
     input_paths = sorted(
         path
-        for path in input_dir.glob(
-            f"*{UNFILTERED_SIGNIFICANT_PEAKS_SUFFIX}"
-        )
+        for path in input_dir.glob(f"*{UNFILTERED_SIGNIFICANT_PEAKS_SUFFIX}")
         if path.is_file()
     )
     if not input_paths:
@@ -354,9 +365,7 @@ def discover_input_files(input_dir: Path) -> list[Path]:
             f"Could not infer cell types from filenames: {empty_cell_types}"
         )
     if len(cell_types) != len(set(cell_types)):
-        raise ValueError(
-            "Multiple input files resolve to the same cell-type name."
-        )
+        raise ValueError("Multiple input files resolve to the same cell-type name.")
 
     return input_paths
 
@@ -364,19 +373,21 @@ def discover_input_files(input_dir: Path) -> list[Path]:
 def make_output_path(input_path: Path, output_dir: Path) -> tuple[str, Path]:
     """Infer the cell type and corresponding filtered output path."""
 
-    cell_type = input_path.name[
-        : -len(UNFILTERED_SIGNIFICANT_PEAKS_SUFFIX)
-    ]
-    output_path = (
-        output_dir
-        / f"{cell_type}{FILTERED_SIGNIFICANT_PEAKS_SUFFIX}"
-    )
+    cell_type = input_path.name[: -len(UNFILTERED_SIGNIFICANT_PEAKS_SUFFIX)]
+    output_path = output_dir / f"{cell_type}{FILTERED_SIGNIFICANT_PEAKS_SUFFIX}"
     return cell_type, output_path
+
+
+def make_pie_chart_path(cell_type: str, plots_dir: Path) -> Path:
+    """Construct the pie-chart path for one cell type."""
+
+    return plots_dir / f"{cell_type}{PIE_CHART_SUFFIX}"
 
 
 def validate_output_paths(
     input_paths: Sequence[Path],
     output_dir: Path,
+    plots_dir: Path,
     summary_path: Path,
     overwrite: bool,
 ) -> None:
@@ -385,21 +396,21 @@ def validate_output_paths(
     if overwrite:
         return
 
-    existing_paths = [
-        make_output_path(path, output_dir)[1]
-        for path in input_paths
-        if make_output_path(path, output_dir)[1].exists()
-    ]
+    existing_paths: list[Path] = []
+    for path in input_paths:
+        cell_type, output_path = make_output_path(path, output_dir)
+        pie_chart_path = make_pie_chart_path(cell_type, plots_dir)
+        if output_path.exists():
+            existing_paths.append(output_path)
+        if pie_chart_path.exists():
+            existing_paths.append(pie_chart_path)
+
     if summary_path.exists():
         existing_paths.append(summary_path)
 
     if existing_paths:
         preview = "\n".join(f"  - {path}" for path in existing_paths[:10])
-        suffix = (
-            "\n  - ..."
-            if len(existing_paths) > 10
-            else ""
-        )
+        suffix = "\n  - ..." if len(existing_paths) > 10 else ""
         raise FileExistsError(
             "Output files already exist. Use --overwrite to replace them:\n"
             f"{preview}{suffix}"
@@ -409,11 +420,13 @@ def validate_output_paths(
 def process_peak_file(
     input_path: Path,
     output_dir: Path,
+    plots_dir: Path,
     eqtl_intervals: pd.DataFrame,
 ) -> dict[str, object]:
     """Remove complete peaks overlapping exact eQTL positions."""
 
     cell_type, output_path = make_output_path(input_path, output_dir)
+    pie_chart_path = make_pie_chart_path(cell_type, plots_dir)
     LOGGER.info("Processing %s", input_path)
 
     original_peaks = read_bed_preserving_values(input_path)
@@ -423,23 +436,11 @@ def process_peak_file(
         filtered_original = original_peaks
     else:
         peak_intervals = build_bioframe_peak_table(original_peaks)
-
-        # setdiff removes each whole interval from the first dataframe if it
-        # overlaps any interval in the second dataframe. It does not split or
-        # shorten peaks.
         filtered_intervals = bioframe.setdiff(
             peak_intervals,
             eqtl_intervals,
-            cols1=(
-                BIOFRAME_CHROM_COLUMN,
-                BIOFRAME_START_COLUMN,
-                BIOFRAME_END_COLUMN,
-            ),
-            cols2=(
-                BIOFRAME_CHROM_COLUMN,
-                BIOFRAME_START_COLUMN,
-                BIOFRAME_END_COLUMN,
-            ),
+            cols1=(BIOFRAME_CHROM_COLUMN, BIOFRAME_START_COLUMN, BIOFRAME_END_COLUMN),
+            cols2=(BIOFRAME_CHROM_COLUMN, BIOFRAME_START_COLUMN, BIOFRAME_END_COLUMN),
         )
 
         retained_row_ids = (
@@ -454,17 +455,17 @@ def process_peak_file(
     n_removed = n_input - n_output
 
     if n_input != n_removed + n_output:
-        raise RuntimeError(
-            f"Peak-count integrity check failed for {input_path}."
-        )
+        raise RuntimeError(f"Peak-count integrity check failed for {input_path}.")
 
     write_bed_atomic(filtered_original, output_path)
-
-    fraction_removed = (
-        float(n_removed / n_input)
-        if n_input > 0
-        else 0.0
+    create_pie_chart(
+        pie_chart_path,
+        cell_type=cell_type,
+        n_eqtl_overlap=n_removed,
+        n_without_eqtl=n_output,
     )
+
+    fraction_removed = float(n_removed / n_input) if n_input > 0 else 0.0
     LOGGER.info(
         "%s: retained %d/%d peaks; removed %d (%.2f%%)",
         cell_type,
@@ -478,6 +479,7 @@ def process_peak_file(
         "cell_type": cell_type,
         "input_file": str(input_path),
         "output_file": str(output_path),
+        "pie_chart_file": str(pie_chart_path),
         "n_input_significant_peaks": n_input,
         "n_removed_eqtl_overlapping_peaks": n_removed,
         "n_significant_peaks_without_eqtl": n_output,
@@ -490,51 +492,45 @@ def run(overwrite: bool = False) -> pd.DataFrame:
 
     input_paths = discover_input_files(UNFILTERED_SIG_PEAKS_DIR)
     FILTERED_SIG_PEAKS_DIR.mkdir(parents=True, exist_ok=True)
+    SIGNIFICANT_PEAKS_EQTL_PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 
     validate_output_paths(
         input_paths=input_paths,
         output_dir=FILTERED_SIG_PEAKS_DIR,
+        plots_dir=SIGNIFICANT_PEAKS_EQTL_PLOTS_DIR,
         summary_path=SIGNIFICANT_PEAKS_EQTL_FILTERING_SUMMARY_PATH,
         overwrite=overwrite,
     )
 
-    eqtl_intervals, _ = load_eqtl_intervals(
-        LIVER_EQTL_SIGNIFICANT_PAIRS_PATH
-    )
+    eqtl_intervals, _ = load_eqtl_intervals(LIVER_EQTL_SIGNIFICANT_PAIRS_PATH)
 
     records = [
         process_peak_file(
             input_path=input_path,
             output_dir=FILTERED_SIG_PEAKS_DIR,
+            plots_dir=SIGNIFICANT_PEAKS_EQTL_PLOTS_DIR,
             eqtl_intervals=eqtl_intervals,
         )
         for input_path in input_paths
     ]
 
-    summary = pd.DataFrame.from_records(
-        records,
-        columns=SUMMARY_COLUMNS,
-    ).sort_values("cell_type", kind="stable")
-
-    write_summary_atomic(
-        summary,
-        SIGNIFICANT_PEAKS_EQTL_FILTERING_SUMMARY_PATH,
+    summary = pd.DataFrame.from_records(records, columns=SUMMARY_COLUMNS).sort_values(
+        "cell_type",
+        kind="stable",
     )
+
+    write_summary_atomic(summary, SIGNIFICANT_PEAKS_EQTL_FILTERING_SUMMARY_PATH)
 
     total_input = int(summary["n_input_significant_peaks"].sum())
-    total_removed = int(
-        summary["n_removed_eqtl_overlapping_peaks"].sum()
-    )
-    total_output = int(
-        summary["n_significant_peaks_without_eqtl"].sum()
-    )
+    total_removed = int(summary["n_removed_eqtl_overlapping_peaks"].sum())
+    total_output = int(summary["n_significant_peaks_without_eqtl"].sum())
 
     if total_input != total_removed + total_output:
         raise RuntimeError("Dataset-wide peak-count integrity check failed.")
 
     LOGGER.info(
-        "Completed %d cell types: retained %d/%d peaks; removed %d "
-        "(%.2f%%). Summary: %s",
+        "Completed %d cell types: retained %d/%d peaks; removed %d (%.2f%%). "
+        "Summary: %s",
         len(summary),
         total_output,
         total_input,
@@ -551,13 +547,13 @@ def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Remove significant peaks that overlap exact GTEx liver "
-            "eQTL positions."
+            "eQTL positions and create one pie chart per cell type."
         )
     )
     parser.add_argument(
         "--overwrite",
         action="store_true",
-        help="Replace existing filtered BED files and summary.",
+        help="Replace existing filtered BED files, plots, and summary.",
     )
     parser.add_argument(
         "--log-level",

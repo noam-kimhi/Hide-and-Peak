@@ -169,22 +169,12 @@ FILTERED_SIG_PEAKS_DIR.mkdir(parents=True, exist_ok=True)
 # Exact GTEx liver eQTL overlap with filtered cell-type peaks
 # ---------------------------------------------------------------------------
 
-LIVER_EQTL_SIGNIFICANT_PAIRS_PATH: Final[Path] = (
-    EQTL_DIR / "Liver.v8.signif_variant_gene_pairs.txt.gz"
-)
-
-UNFILTERED_SIGNIFICANT_PEAKS_SUFFIX: Final[str] = (
-    "_significant_peaks.bed.gz"
-)
-
-FILTERED_SIGNIFICANT_PEAKS_SUFFIX: Final[str] = (
-    "_significant_peaks_without_eqtl.bed.gz"
-)
-
-SIGNIFICANT_PEAKS_EQTL_FILTERING_SUMMARY_PATH: Final[Path] = (
-    FILTERED_SIG_PEAKS_DIR
-    / "significant_peaks_eqtl_filtering_summary.csv"
-)
+LIVER_EQTL_SIGNIFICANT_PAIRS_PATH: Final[Path] = EQTL_DIR / "Liver.v8.signif_variant_gene_pairs.txt.gz"
+UNFILTERED_SIGNIFICANT_PEAKS_SUFFIX: Final[str] = "_significant_peaks.bed.gz"
+FILTERED_SIGNIFICANT_PEAKS_SUFFIX: Final[str] = "_significant_peaks_without_eqtl.bed.gz"
+SIGNIFICANT_PEAKS_EQTL_FILTERING_SUMMARY_PATH: Final[Path] = FILTERED_SIG_PEAKS_DIR / "significant_peaks_eqtl_filtering_summary.csv"
+SIGNIFICANT_PEAKS_EQTL_PLOTS_DIR: Final[Path] = FILTERED_SIG_PEAKS_DIR / "eqtl_overlap_pie_charts"
+SIGNIFICANT_PEAKS_EQTL_PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 
 # ---------------------------------------------------------------------------
 # DESeq2 differential-accessibility result analysis
@@ -310,3 +300,22 @@ DESEQ2_SAMPLE_SUPPORT_LOO_MODERATE_THRESHOLD: Final[float] = 0.80
 # Flag a group when one sample contributes more than this fraction of
 # the group's total normalized signal for a peak.
 DESEQ2_SAMPLE_SUPPORT_MAX_SAMPLE_SHARE_WARNING: Final[float] = 0.50
+
+
+# ---------------------------------------------------------------------------
+# High-confidence significant peaks per cell type
+# ---------------------------------------------------------------------------
+
+SIGNIFICANT_PEAK_CELL_TYPES: Final[Sequence[str]] = (
+    "Cholangiocyte",
+    "Endothelial",
+    "Hepatocytes",
+    "Kupffer",
+    "Stellate",
+    "T_NK_B",
+    "Unknown",
+)
+
+# ABC
+ABC_DATA_DIR: Final[Path] = DATA_DIR / "ABC"
+ABC_PRED_FILE: Final[Path] = ABC_DATA_DIR / "AllPredictions.AvgHiC.ABC0.015.minus150.ForABCPaperV3.txt"
