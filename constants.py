@@ -163,6 +163,10 @@ UNFILTERED_SIG_PEAKS_DIR: Final[Path] = SIG_PEAKS_DIR / "unfiltered_significant_
 UNFILTERED_SIG_PEAKS_DIR.mkdir(parents=True, exist_ok=True)
 FILTERED_SIG_PEAKS_DIR: Final[Path] = SIG_PEAKS_DIR / "filtered_significant_peaks"
 FILTERED_SIG_PEAKS_DIR.mkdir(parents=True, exist_ok=True)
+SOFT_UNFILTERED_SIG_PEAKS_DIR: Final[Path] = SIG_PEAKS_DIR / "soft_unfiltered_significant_peaks"
+SOFT_UNFILTERED_SIG_PEAKS_DIR.mkdir(parents=True, exist_ok=True)
+SOFT_FILTERED_SIG_PEAKS_DIR: Final[Path] = SIG_PEAKS_DIR / "soft_filtered_significant_peaks"
+SOFT_FILTERED_SIG_PEAKS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # ---------------------------------------------------------------------------
@@ -341,3 +345,6 @@ SIGNIFICANT_PEAK_CELL_TYPES: Final[Sequence[str]] = (
 # ---------------------------------------------------------------------------
 ABC_DATA_DIR: Final[Path] = DATA_DIR / "ABC"
 ABC_PRED_FILE: Final[Path] = ABC_DATA_DIR / "AllPredictions.AvgHiC.ABC0.015.minus150.ForABCPaperV3.txt.gz"
+ABC_DICT_PATH: Final[Path] = ABC_DATA_DIR / "Stanford_ABC_Liver_Dictionary.csv"
+PEAK2GENE_OUTPUT_DIR: Final[Path] = PEAQTL_RESULTS_DIR / "peak2gene"
+PEAK2GENE_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)

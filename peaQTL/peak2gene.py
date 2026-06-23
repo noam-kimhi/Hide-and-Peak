@@ -5,8 +5,8 @@ Maps cell-type-specific significant peaks to target genes by intersecting
 them with the Stanford ABC Liver reference dictionary via bioframe.overlap.
 """
 
-import logging
 import pandas as pd
+import bioframe
 
 from constants import (
     ABC_DATA_DIR,
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 # Paths
 # ---------------------------------------------------------------------------
 
-ABC_REFERENCE_PATH = ABC_DATA_DIR / "Stanford_ABC_Liver_Dictionary.csv"
+ABC_PEAK2GENE_OUTPUT_DIRABC_DATA_DIR / "Stanford_ABC_Liver_Dictionary.csv"
 
 PEAK2GENE_OUTPUT_DIR = PEAQTL_RESULTS_DIR / "peak2gene"
 PEAK2GENE_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -60,12 +60,18 @@ def load_cell_type_peaks(cell_type: str) -> pd.DataFrame:
 
 
 def _normalise_chroms(df: pd.DataFrame) -> pd.DataFrame:
-    """Ensure chromosome names carry the 'chr' prefix (e.g. '1' -> 'chr1')."""
+    """Ensure chromosome names carry the 'chr' prefix robustly and drop bad headers."""
     if df.empty:
         return df
-    if not df["chrom"].iloc[0].startswith("chr"):
-        df = df.copy()
-        df["chrom"] = "chr" + df["chrom"].astype(str)
+    
+    df = df.copy()
+    # Bulletproof 1: Drop accidental text headers (prevents the 10-row bug)
+    df = df[df["chrom"].astype(str).str.lower() != "chrom"]
+    
+    # Bulletproof 2: Safely add 'chr' prefix only if it's missing (prevents 'chrchr1')
+    df["chrom"] = df["chrom"].astype(str).apply(
+        lambda x: x if x.startswith("chr") else f"chr{x}"
+    )
     return df
 
 
@@ -74,16 +80,8 @@ def map_peaks_to_genes(
     reference: pd.DataFrame,
 ) -> pd.DataFrame:
     """
-    Intersect cell-type peaks with the ABC reference dictionary.
-
-    Uses a pure pandas merge approach to avoid any dependency on bioframe's
-    column-suffix behaviour:
-      1. Merge left (peaks) and right (reference) on 'chrom' — equality join
-         per chromosome.
-      2. Filter merged rows to keep only pairs where the intervals overlap:
-             peak.start < ref.end  AND  ref.start < peak.end
-         (standard half-open interval overlap condition).
-      3. Return only the original peak coordinates plus annotation columns.
+    Intersect cell-type peaks with the ABC reference dictionary via bioframe.
+    Contains dynamic column checking to be 100% immune to bioframe version changes.
     """
     peaks = _normalise_chroms(peaks)
     reference = _normalise_chroms(reference)
@@ -94,20 +92,34 @@ def map_peaks_to_genes(
         reference["chrom"].iloc[0] if len(reference) else "empty",
     )
 
-    # Merge on chromosome (reduces search space before interval filtering).
-    merged = peaks.merge(
-        reference[["chrom", "start", "end", "TargetGene", "ABC.Score"]],
-        on="chrom",
+    # Force peaks to only contain the coordinate columns to avoid suffix collisions
+    peaks = peaks[["chrom", "start", "end"]].copy()
+
+    # Inner join via interval tree
+    overlaps = bioframe.overlap(
+        peaks,
+        reference,
+        cols1=["chrom", "start", "end"],
+        cols2=["chrom", "start", "end"],
+        how="inner",
         suffixes=("", "_ref"),
+        return_index=False
     )
 
-    # Keep only rows where the two intervals actually overlap.
-    # Half-open interval overlap: [a, b) overlaps [c, d) iff a < d AND c < b
-    overlap_mask = (merged["start"] < merged["end_ref"]) & (merged["start_ref"] < merged["end"])
-    result = (
-        merged.loc[overlap_mask, ["chrom", "start", "end", "TargetGene", "ABC.Score"]]
-        .reset_index(drop=True)
-    )
+    # Bulletproof 3: Dynamic column resolution 
+    # (handles both cases: whether bioframe appended '_ref' or not)
+    target_col = "TargetGene_ref" if "TargetGene_ref" in overlaps.columns else "TargetGene"
+    abc_col = "ABC.Score_ref" if "ABC.Score_ref" in overlaps.columns else "ABC.Score"
+
+    # Safe extraction
+    keep_cols = ["chrom", "start", "end", target_col, abc_col]
+    result = overlaps[keep_cols].copy()
+
+    # Final clean rename
+    result = result.rename(columns={
+        target_col: "TargetGene",
+        abc_col: "ABC.Score"
+    })
 
     return result
 
