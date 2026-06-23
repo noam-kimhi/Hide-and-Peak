@@ -25,7 +25,7 @@ import gzip
 import math
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Final
+from typing import Any, Final, TypeAlias
 
 import matplotlib
 
@@ -34,7 +34,6 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from matplotlib.colors import LinearSegmentedColormap, to_hex, to_rgb
 from scipy import sparse
 from scipy.io import mmread
 
@@ -57,6 +56,10 @@ PLOTS_DIR: Final[Path] = PEAK_FILTERING_RESULTS_DIR / "plots"
 OVERALL_HEATMAPS_DIR: Final[Path] = PLOTS_DIR / "retained_fraction_overall"
 CELL_TYPE_HEATMAPS_DIR: Final[Path] = PLOTS_DIR / "retained_fraction_by_cell_type"
 THRESHOLD_CURVES_DIR: Final[Path] = PLOTS_DIR / "threshold_curves"
+
+PlotColor: TypeAlias = str | tuple[float, float, float, float]
+SCRIPT_VERSION: Final[str] = "distinct-colors-v2"
+HEATMAP_COLORMAP: Final[str] = "viridis"
 
 GROUP_SIZES_PATH: Final[Path] = PEAK_FILTERING_RESULTS_DIR / "group_sizes.csv"
 GROUP_SIZE_SENSITIVITY_PATH: Final[Path] = (
@@ -890,47 +893,76 @@ def summarize_hybrid_thresholds(
     return pd.DataFrame.from_records(records)
 
 
-def blend_colors(
-    start_color: str,
-    end_color: str,
-    n_colors: int,
-) -> list[str]:
+def get_plot_colors(n_colors: int) -> list[PlotColor]:
     """
-    Generate colors interpolated between two configured plot colors.
+    Return a plot palette with clearly distinguishable colors.
 
-    :param start_color: First color in the palette.
-    :param end_color: Last color in the palette.
-    :param n_colors: Number of requested colors.
-    :return: Hexadecimal color strings.
+    A single-series plot uses ``PLOTS_MAIN_COLOR``. A two-series plot uses
+    ``PLOTS_MAIN_COLOR`` and ``PLOTS_SECOND_COLOR``. Plots with more than two
+    series use a qualitative Matplotlib palette so adjacent series remain easy
+    to distinguish.
+
+    :param n_colors: Number of colors required by the plot.
+    :return: Ordered list of Matplotlib-compatible colors.
     """
     if n_colors < 1:
         raise ValueError("n_colors must be at least 1.")
 
     if n_colors == 1:
-        return [to_hex(start_color)]
+        return [PLOTS_MAIN_COLOR]
 
-    start_rgb = np.array(to_rgb(start_color))
-    end_rgb = np.array(to_rgb(end_color))
+    if n_colors == 2:
+        return [
+            PLOTS_MAIN_COLOR,
+            PLOTS_SECOND_COLOR,
+        ]
+
+    colormap_name = (
+        "tab10"
+        if n_colors <= 10
+        else "tab20"
+    )
+    colormap = matplotlib.colormaps[
+        colormap_name
+    ].resampled(n_colors)
 
     return [
-        to_hex(
-            start_rgb
-            + (end_rgb - start_rgb) * fraction
-        )
-        for fraction in np.linspace(0.0, 1.0, n_colors)
+        colormap(index)
+        for index in range(n_colors)
     ]
 
 
-def sequential_colormap() -> LinearSegmentedColormap:
+def get_heatmap_text_color(
+    value: float,
+    minimum_value: float,
+    maximum_value: float,
+) -> str:
     """
-    Build a sequential colormap ending in the configured main color.
+    Choose readable annotation text for a continuous heatmap cell.
 
-    :return: Sequential colormap for proportions and counts.
+    :param value: Numeric value represented by the heatmap cell.
+    :param minimum_value: Lower bound of the heatmap color scale.
+    :param maximum_value: Upper bound of the heatmap color scale.
+    :return: Either white or black, depending on the normalized cell value.
     """
-    return LinearSegmentedColormap.from_list(
-        "peak_filtering_sequential",
-        ["#ffffff", PLOTS_MAIN_COLOR],
+    if not np.isfinite(value):
+        return "black"
+
+    if maximum_value <= minimum_value:
+        normalized_value = 0.0
+    else:
+        normalized_value = (
+            value - minimum_value
+        ) / (
+            maximum_value - minimum_value
+        )
+
+    return (
+        "white"
+        if normalized_value < 0.55
+        else "black"
     )
+
 
 
 def save_figure(
@@ -987,7 +1019,7 @@ def plot_group_size_heatmap(
     image = axis.imshow(
         transformed_values,
         aspect="auto",
-        cmap=sequential_colormap(),
+        cmap=HEATMAP_COLORMAP,
     )
 
     axis.set_xticks(
@@ -1017,6 +1049,18 @@ def plot_group_size_heatmap(
                 ha="center",
                 va="center",
                 fontsize=7,
+                color=get_heatmap_text_color(
+                    value=transformed_values[
+                        row_index,
+                        column_index,
+                    ],
+                    minimum_value=float(
+                        np.nanmin(transformed_values)
+                    ),
+                    maximum_value=float(
+                        np.nanmax(transformed_values)
+                    ),
+                ),
             )
 
     colorbar = figure.colorbar(
@@ -1051,14 +1095,12 @@ def plot_usable_groups_overall(
         figsize=(9, 5.5),
     )
 
+    colors = get_plot_colors(3)
+
     series = (
-        ("Total", "n_eligible_groups", PLOTS_MAIN_COLOR),
-        ("MASH", "n_eligible_mash", PLOTS_SECOND_COLOR),
-        (
-            "Normal",
-            "n_eligible_normal",
-            blend_colors(PLOTS_MAIN_COLOR, PLOTS_SECOND_COLOR, 3)[1],
-        ),
+        ("Total", "n_eligible_groups", colors[0]),
+        ("MASH", "n_eligible_mash", colors[1]),
+        ("Normal", "n_eligible_normal", colors[2]),
     )
 
     for label, column, color in series:
@@ -1096,10 +1138,8 @@ def plot_usable_groups_by_cell_type(
     :param group_size_sensitivity: Group-size threshold sensitivity table.
     :param cell_type_order: Ordered standardized cell types.
     """
-    colors = blend_colors(
-        PLOTS_MAIN_COLOR,
-        PLOTS_SECOND_COLOR,
-        len(cell_type_order),
+    colors = get_plot_colors(
+        len(cell_type_order)
     )
 
     figure, axis = plt.subplots(
@@ -1170,10 +1210,8 @@ def plot_support_categories_by_cell_type(
         axis=0,
     )
 
-    colors = blend_colors(
-        PLOTS_MAIN_COLOR,
-        PLOTS_SECOND_COLOR,
-        len(SUPPORT_CATEGORY_ORDER),
+    colors = get_plot_colors(
+        len(SUPPORT_CATEGORY_ORDER)
     )
 
     figure, axis = plt.subplots(
@@ -1274,7 +1312,7 @@ def plot_overall_retention_heatmaps(
             vmin=0.0,
             vmax=1.0,
             aspect="auto",
-            cmap=sequential_colormap(),
+            cmap=HEATMAP_COLORMAP,
         )
 
         axis.set_xticks(
@@ -1311,6 +1349,11 @@ def plot_overall_retention_heatmaps(
                     ha="center",
                     va="center",
                     fontsize=8,
+                    color=get_heatmap_text_color(
+                        value=value,
+                        minimum_value=0.0,
+                        maximum_value=1.0,
+                    ),
                 )
 
         colorbar = figure.colorbar(
@@ -1406,7 +1449,7 @@ def plot_cell_type_retention_heatmaps(
             vmin=0.0,
             vmax=1.0,
             aspect="auto",
-            cmap=sequential_colormap(),
+            cmap=HEATMAP_COLORMAP,
         )
 
         axis.set_xticks(
@@ -1457,10 +1500,8 @@ def plot_threshold_curves(
     :param minimum_group_sizes: Candidate minimum usable group sizes.
     :param minimum_cell_supports: Candidate absolute support thresholds.
     """
-    colors = blend_colors(
-        PLOTS_MAIN_COLOR,
-        PLOTS_SECOND_COLOR,
-        len(minimum_cell_supports),
+    colors = get_plot_colors(
+        len(minimum_cell_supports)
     )
 
     for minimum_group_size in minimum_group_sizes:
@@ -1527,6 +1568,10 @@ def write_manifest(
     """
     manifest = f"""Peak-filtering hyperparameter analysis
 ========================================
+
+Script version
+--------------
+{SCRIPT_VERSION}
 
 This directory contains sensitivity analyses only. No peak or matrix was
 filtered or overwritten.
