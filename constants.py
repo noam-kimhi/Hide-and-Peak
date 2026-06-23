@@ -1,5 +1,15 @@
-from typing import Final, Sequence, Dict
+"""Shared path, filename, plotting, and analysis constants for the project.
+
+Constants in this module are evaluated relative to the current working
+directory via ``Path.cwd()``. Several output directories are created at import
+time because the existing pipeline scripts rely on those paths being available.
+"""
+
+from __future__ import annotations
+
 from pathlib import Path
+from typing import Final
+from collections.abc import Sequence
 
 PLOT_DPI: Final[int] = 300
 
@@ -56,7 +66,7 @@ MATRIX_SUFFIX: Final[str] = "_matrix.mtx.gz"
 FRAGMENTS_SUFFIX: Final[str] = "_fragments.tsv.gz"
 
 EXPECTED_SAMPLE_COUNT: Final[int] = 12
-EXPECTED_SAMPLES_PER_CONDITION: Final[Dict[str, int]] = {
+EXPECTED_SAMPLES_PER_CONDITION: Final[dict[str, int]] = {
     "healthy": 6,
     "MASLD": 6,
 }
@@ -70,7 +80,7 @@ CONSENSUS_PEAKS_SUMMARY_OUTPUT_PATH: Final[Path] = DERIVED_DATA_DIR / "consensus
 
 # True follows the default behavior of bedtools merge:
 # overlapping and directly adjacent ("book-ended") intervals are merged.
-MERGE_BOOKENDED_PEAKS = True
+MERGE_BOOKENDED_PEAKS: Final[bool] = True
 
 REFERENCE_GRCH38_DIR: Final[Path] = DATA_DIR / "reference_grch38"
 BLACKLIST_BED_PATH: Final[Path] = REFERENCE_GRCH38_DIR / "ENCFF356LFX.bed.gz"
@@ -78,21 +88,21 @@ REPRODUCIBLE_CONSENSUS_PEAKS_OUTPUT_PATH: Final[Path] = DERIVED_DATA_DIR / "repr
 REPRODUCIBLE_CONSENSUS_PEAKS_ANNOTATION_OUTPUT_PATH: Final[Path] = DERIVED_DATA_DIR / "reproducible_consensus_peaks_annotations.csv"
 PEAK_TO_CONSENSUS_MAP_OUTPUT_PATH: Final[Path] = DERIVED_DATA_DIR / "peak_to_consensus_map.csv"
 
-MIN_REPRODUCIBLE_SAMPLE_SUPPORT = 2
+MIN_REPRODUCIBLE_SAMPLE_SUPPORT: Final[int] = 2
 
-RDS_PATH = ATAC_SEQ_DIR / "GSE281367_seurat_clustered.rds.gz"
-PREPROCESS_DIR = BASE_DIR / "preprocessing"
-SEURAT_INSPECTION_DIR = PREPROCESS_DIR / "inspecting_seurat"
-INSPECTION_DIR = DERIVED_DATA_DIR / "gse281367_rds_inspection"
+RDS_PATH: Final[Path] = ATAC_SEQ_DIR / "GSE281367_seurat_clustered.rds.gz"
+PREPROCESS_DIR: Final[Path] = BASE_DIR / "preprocessing"
+SEURAT_INSPECTION_DIR: Final[Path] = PREPROCESS_DIR / "inspecting_seurat"
+INSPECTION_DIR: Final[Path] = DERIVED_DATA_DIR / "gse281367_rds_inspection"
 INSPECTION_DIR.mkdir(parents=True, exist_ok=True)
-R_SCRIPT_PATH = SEURAT_INSPECTION_DIR / "inspect_seurat_object.R"
+R_SCRIPT_PATH: Final[Path] = SEURAT_INSPECTION_DIR / "inspect_seurat_object.R"
 SEURAT_METADATA_PATH: Final[Path] = INSPECTION_DIR / "GSE281367_cell_metadata.csv.gz"
 ANNOTATIONS_PATH: Final[Path] = INSPECTION_DIR / "GSE281367_cell_annotations.csv.gz"
 ANNOTATION_DIR: Final[Path] = INSPECTION_DIR / "gse281367_annotations"
 ANNOTATION_DIR.mkdir(parents=True, exist_ok=True)
 CELL_ANNOTATIONS_PATH: Final[Path] = ANNOTATION_DIR / "GSE281367_cell_annotations.csv.gz"
 
-CELL_TYPE_STANDARDIZATION = {
+CELL_TYPE_STANDARDIZATION: Final[dict[str, str]] = {
     "Hepatocytes": "Hepatocytes",
     "EC": "Endothelial",
     "NK": "T_NK_B",
@@ -186,35 +196,35 @@ SIGNIFICANT_PEAKS_EQTL_PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 
 PEAQTL_RESULTS_DIR: Final[Path] = RESULTS_DIR / "peaQTL"
 
-DESEQ2_RESULTS_DIR = PEAQTL_RESULTS_DIR / "differential_peaks"
-DESEQ2_RESULTS_SUFFIX = "_deseq2_results.csv"
+DESEQ2_RESULTS_DIR: Final[Path] = PEAQTL_RESULTS_DIR / "differential_peaks"
+DESEQ2_RESULTS_SUFFIX: Final[str] = "_deseq2_results.csv"
 
-DESEQ2_ANALYSIS_DIR = DESEQ2_RESULTS_DIR / "analysis"
-DESEQ2_SUMMARY_CSV = (
+DESEQ2_ANALYSIS_DIR: Final[Path] = DESEQ2_RESULTS_DIR / "analysis"
+DESEQ2_SUMMARY_CSV: Final[Path] = (
     DESEQ2_ANALYSIS_DIR / "deseq2_all_cell_types_summary.csv"
 )
-DESEQ2_THRESHOLD_GRID_CSV = (
+DESEQ2_THRESHOLD_GRID_CSV: Final[Path] = (
     DESEQ2_ANALYSIS_DIR / "deseq2_significance_threshold_grid.csv"
 )
 
-DESEQ2_PLOTS_DIR = DESEQ2_ANALYSIS_DIR / "plots"
-DESEQ2_PER_CELL_PLOTS_DIR = DESEQ2_PLOTS_DIR / "per_cell_type"
+DESEQ2_PLOTS_DIR: Final[Path] = DESEQ2_ANALYSIS_DIR / "plots"
+DESEQ2_PER_CELL_PLOTS_DIR: Final[Path] = DESEQ2_PLOTS_DIR / "per_cell_type"
 
 # Thresholds examined in the summary tables.
-DESEQ2_PVALUE_THRESHOLDS = (
+DESEQ2_PVALUE_THRESHOLDS: Final[tuple[float, ...]] = (
     0.05,
     0.01,
     0.001,
     0.0001,
 )
 
-DESEQ2_PADJ_THRESHOLDS = (
+DESEQ2_PADJ_THRESHOLDS: Final[tuple[float, ...]] = (
     0.10,
     0.05,
     0.01,
 )
 
-DESEQ2_ABS_LOG2FC_THRESHOLDS = (
+DESEQ2_ABS_LOG2FC_THRESHOLDS: Final[tuple[float, ...]] = (
     0.0,
     0.25,
     0.50,
@@ -222,7 +232,7 @@ DESEQ2_ABS_LOG2FC_THRESHOLDS = (
     1.00,
 )
 
-DESEQ2_BASE_MEAN_THRESHOLDS = (
+DESEQ2_BASE_MEAN_THRESHOLDS: Final[tuple[float, ...]] = (
     1.0,
     5.0,
     10.0,
@@ -230,15 +240,15 @@ DESEQ2_BASE_MEAN_THRESHOLDS = (
 
 # Default criterion used only for highlighting points and summary plots.
 # Final threshold selection can be changed after inspecting the results.
-DESEQ2_DEFAULT_PADJ_THRESHOLD = 0.05
-DESEQ2_DEFAULT_ABS_LOG2FC_THRESHOLD = 0.58
+DESEQ2_DEFAULT_PADJ_THRESHOLD: Final[float] = 0.05
+DESEQ2_DEFAULT_ABS_LOG2FC_THRESHOLD: Final[float] = 0.58
 
 # Plot settings.
-DESEQ2_PLOT_FORMAT = "png"
-DESEQ2_PVALUE_HISTOGRAM_BINS = 40
-DESEQ2_TOP_PEAK_LABELS = 8
-DESEQ2_MAX_NEG_LOG10_FOR_PLOTS = 50.0
-DESEQ2_MA_MAX_ABS_LOG2FC = 10.0
+DESEQ2_PLOT_FORMAT: Final[str] = "png"
+DESEQ2_PVALUE_HISTOGRAM_BINS: Final[int] = 40
+DESEQ2_TOP_PEAK_LABELS: Final[int] = 8
+DESEQ2_MAX_NEG_LOG10_FOR_PLOTS: Final[float] = 50.0
+DESEQ2_MA_MAX_ABS_LOG2FC: Final[float] = 10.0
 
 DESEQ2_THRESHOLD_PLOT_ABS_LOG2FC_THRESHOLDS: Final[Sequence[float]] = (
     0.0,
