@@ -118,13 +118,34 @@ PSEUDOBULK_OUTPUT_DIR: Final[Path] = DERIVED_DATA_DIR / "pseudobulk"
 PSEUDOBULK_SUMMARY_PATH: Final[Path] = PSEUDOBULK_OUTPUT_DIR / "pseudobulk_summary.csv"
 
 PLOTS_MAIN_COLOR: Final[str] = '#f08423'
+PLOTS_SECOND_COLOR: Final[str] = 'red'
 
-MATRIX_BINARIZATION_PLOTS_DIR: Final[Path] = (
-    PREPROCESSING_RES_DIR
-    / "matrix_splitting"
-    / "binarization"
+MATRIX_BINARIZATION_PLOTS_DIR: Final[Path] = PREPROCESSING_RES_DIR / "matrix_splitting" / "binarization"
+MATRIX_BINARIZATION_PLOTS_DIR.mkdir(parents=True, exist_ok=True)
+
+PEAK_FILTERING_RESULTS_DIR: Final[Path] = PREPROCESSING_RES_DIR / "peak_filtering"
+PEAK_FILTERING_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+PEAK_FILTER_MIN_GROUP_SIZES: Final[Sequence[int]] = (
+    1,
+    10,
+    20,
+    30,
+    50,
+    100,
 )
-MATRIX_BINARIZATION_PLOTS_DIR.mkdir(
-    parents=True,
-    exist_ok=True,
+
+PEAK_FILTER_MIN_CELL_SUPPORTS: Final[Sequence[int]] = (
+    1,
+    2,
+    3,
+    5,
+    10,
+)
+
+PEAK_FILTER_MIN_CELL_FRACTIONS: Final[Sequence[float]] = (
+    0.0,
+    0.005,
+    0.01,
+    0.02,
+    0.05,
 )
