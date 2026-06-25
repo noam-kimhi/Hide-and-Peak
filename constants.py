@@ -354,7 +354,18 @@ SIGNIFICANT_PEAK_CELL_TYPES: Final[Sequence[str]] = (
 # ABC
 # ---------------------------------------------------------------------------
 ABC_DATA_DIR: Final[Path] = DATA_DIR / "ABC"
-ABC_PRED_FILE: Final[Path] = ABC_DATA_DIR / "AllPredictions.AvgHiC.ABC0.015.minus150.ForABCPaperV3.txt.gz"
+ABC_PRED_FILE: Final[Path] = (
+    ABC_DATA_DIR
+    / "AllPredictions.AvgHiC.ABC0.015.minus150.ForABCPaperV3.txt.gz"
+)
+ABC_38_PRED_FILE: Final[Path] = (
+    ABC_DATA_DIR
+    / "AllPredictions.AvgHiC.ABC0.015.minus150.ForABCPaperV3.hg38.txt.gz"
+)
+ABC_HG19_TO_HG38_CHAIN_PATH: Final[Path] = (
+    ABC_DATA_DIR / "hg19ToHg38.over.chain.gz"
+)
+ABC_LIFTOVER_EXECUTABLE_PATH: Final[Path] = ABC_DATA_DIR / "liftOver"
 ABC_DICT_PATH: Final[Path] = ABC_DATA_DIR / "Stanford_ABC_Liver_Dictionary.csv"
 PEAK2GENE_OUTPUT_DIR: Final[Path] = PEAQTL_RESULTS_DIR / "peak2gene"
 PEAK2GENE_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
