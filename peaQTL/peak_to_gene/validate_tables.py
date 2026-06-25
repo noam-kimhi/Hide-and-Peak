@@ -12,7 +12,7 @@ from pathlib import Path
 
 # Ensure the project root (parent of this file's directory) is on sys.path
 # so that constants.py can be imported regardless of working directory.
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import numpy as np
 import pandas as pd

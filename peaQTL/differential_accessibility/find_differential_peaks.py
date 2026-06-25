@@ -24,10 +24,7 @@ padj         : Benjamini–Hochberg adjusted p-value
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pandas as pd
 from pydeseq2.dds import DeseqDataSet
@@ -36,6 +33,7 @@ from pydeseq2.ds import DeseqStats
 from constants import (
     CELL_TYPE_STANDARDIZATION,
     PSEUDOBULK_OUTPUT_DIR,
+    DESEQ2_RESULTS_DIR,
 )
 
 # ---------------------------------------------------------------------------
@@ -51,12 +49,7 @@ EXCLUDED_SAMPLES: list[str] = ["Normal_rep4", "Normal_rep6"]
 # inflate the multiple-testing correction.
 MIN_SAMPLES_NONZERO: int = 2
 
-OUTPUT_DIR: Path = (
-    Path(__file__).resolve().parent.parent
-    / "results"
-    / "peaQTL"
-    / "differential_peaks"
-)
+OUTPUT_DIR: Path = DESEQ2_RESULTS_DIR
 
 
 # ---------------------------------------------------------------------------

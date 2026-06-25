@@ -35,11 +35,71 @@ dir.create(
   showWarnings = FALSE
 )
 
+is_gzip_magic <- function(bytes) {
+  gzip_magic <- as.raw(c(0x1f, 0x8b))
+
+  length(bytes) >= 2L &&
+    identical(bytes[1:2], gzip_magic)
+}
+
+
+read_first_bytes <- function(connection, n = 2L) {
+  on.exit(close(connection), add = TRUE)
+
+  readBin(
+    con = connection,
+    what = "raw",
+    n = n
+  )
+}
+
+
+read_rds_with_compression_detection <- function(path) {
+  raw_magic <- read_first_bytes(
+    file(path, open = "rb")
+  )
+
+  if (!is_gzip_magic(raw_magic)) {
+    message("No outer gzip layer detected.")
+    return(readRDS(path))
+  }
+
+  once_decompressed_magic <- read_first_bytes(
+    gzfile(path, open = "rb")
+  )
+
+  if (!is_gzip_magic(once_decompressed_magic)) {
+    message("Detected one gzip layer.")
+    return(readRDS(path))
+  }
+
+  message("Detected two gzip layers.")
+
+  # gzfile() removes the outer gzip layer.
+  outer_connection <- gzfile(
+    path,
+    open = "rb"
+  )
+
+  # gzcon() removes the remaining inner gzip layer.
+  inner_connection <- gzcon(
+    outer_connection,
+    allowNonCompressed = FALSE,
+    text = FALSE
+  )
+
+  on.exit(
+    close(inner_connection),
+    add = TRUE
+  )
+
+  readRDS(inner_connection)
+}
+
+
 message("Loading Seurat object...")
 
-connection <- gzfile(rds_path, open = "rb")
-object <- readRDS(connection)
-close(connection)
+object <- read_rds_with_compression_detection(rds_path)
 
 message("Object loaded successfully.")
 
@@ -162,66 +222,6 @@ report <- capture.output({
     embedding <- Embeddings(object[[reduction_name]])
 
     cat(
-      reduction_name,
-      ":",
-      nrow(embedding),
-      "cells x",
-      ncol(embedding),
-      "dimensions\n"
-    )
-  }
-
-  cat("\n=== METADATA ===\n")
-  cat(
-    "Metadata dimensions:",
-    nrow(metadata),
-    "rows x",
-    ncol(metadata),
-    "columns\n"
-  )
-
-  print(column_summary)
-
-  cat("\n=== CANDIDATE ANNOTATION COLUMNS ===\n")
-  print(candidate_columns)
-
-  preview_columns <- unique(
-    c("seurat_cell_id", "active_ident", candidate_columns)
-  )
-
-  cat("\n=== FIRST TEN CELLS ===\n")
-  print(
-    head(
-      metadata[, preview_columns, drop = FALSE],
-      10
-    )
-  )
-
-  cat("\n=== VALUE COUNTS FOR CANDIDATE COLUMNS ===\n")
-
-  for (column_name in candidate_columns) {
-    cat("\n---", column_name, "---\n")
-
-    value_counts <- sort(
-      table(metadata[[column_name]], useNA = "ifany"),
-      decreasing = TRUE
-    )
-
-    print(head(value_counts, 30))
-  }
-
-  cat("\n=== FIRST 30 SEURAT CELL IDENTIFIERS ===\n")
-  print(head(metadata$seurat_cell_id, 30))
-})
-
-report_path <- file.path(
-  output_dir,
-  "seurat_object_report.txt"
-)
-
-writeLines(report, report_path)
-cat(paste(report, collapse = "\n"))
-cat("\n")
       reduction_name,
       ":",
       nrow(embedding),

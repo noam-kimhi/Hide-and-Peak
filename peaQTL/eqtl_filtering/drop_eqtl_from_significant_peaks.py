@@ -36,19 +36,19 @@ Examples
 --------
 Default mode:
 
-    python -m peaQTL.drop_eqtl_from_significant_peaks
+    python -m peaQTL.eqtl_filtering.drop_eqtl_from_significant_peaks
 
 Soft mode:
 
-    python -m peaQTL.drop_eqtl_from_significant_peaks --soft
+    python -m peaQTL.eqtl_filtering.drop_eqtl_from_significant_peaks --soft
 
 Overwrite existing outputs:
 
-    python -m peaQTL.drop_eqtl_from_significant_peaks --overwrite
+    python -m peaQTL.eqtl_filtering.drop_eqtl_from_significant_peaks --overwrite
 
 Soft mode with overwrite:
 
-    python -m peaQTL.drop_eqtl_from_significant_peaks --soft --overwrite
+    python -m peaQTL.eqtl_filtering.drop_eqtl_from_significant_peaks --soft --overwrite
 """
 
 from __future__ import annotations

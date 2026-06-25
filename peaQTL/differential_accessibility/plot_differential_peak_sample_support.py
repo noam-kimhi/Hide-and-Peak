@@ -61,8 +61,8 @@ NUMERIC_RESULT_COLUMNS = (
 HEALTHY_CONDITION = "Healthy"
 MASLD_CONDITION = "MASLD"
 
-HEALTHY_COLOR = "#377eb8"
-MASLD_COLOR = "#e6550d"
+HEALTHY_COLOR = C.HEALTHY_PLOT_COLOR
+MASLD_COLOR = C.MASLD_PLOT_COLOR
 STRONG_COLOR = "#238b45"
 MIXED_COLOR = "#fec44f"
 WEAK_COLOR = "#d7301f"
@@ -830,7 +830,7 @@ def plot_top_peak_sample_distributions(
         axis.set_xticks([0.0, 1.0])
         axis.set_xticklabels([HEALTHY_CONDITION, MASLD_CONDITION])
         axis.set_xlim(-0.35, 1.35)
-        axis.set_ylabel("log2(normalized count + 1)")
+        axis.set_ylabel(r"$\log_2(\mathrm{normalized\ count} + 1)$")
         axis.grid(axis="y", alpha=0.18)
 
         axis.set_title(
@@ -1049,7 +1049,7 @@ def plot_effect_vs_sample_support(
         )
 
     axis.set_ylim(0.45, 1.03)
-    axis.set_xlabel("DESeq2 log2 fold change (MASLD / Healthy)")
+    axis.set_xlabel(r"DESeq2 $\log_2(\mathrm{FC})$ (MASLD / Healthy)")
     axis.set_ylabel(
         "Pairwise sample support for the DESeq2 direction"
     )

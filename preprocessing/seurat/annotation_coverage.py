@@ -65,7 +65,7 @@ def main() -> None:
     if not ANNOTATIONS_PATH.is_file():
         print(
             f"ERROR: Cell metadata file not found:\n  {ANNOTATIONS_PATH}\n"
-            "Run preprocessing/inspecting_seurat/inspect.py first to export it.",
+            "Run python -m preprocessing.seurat.inspect first to export it.",
             file=sys.stderr,
         )
         sys.exit(1)

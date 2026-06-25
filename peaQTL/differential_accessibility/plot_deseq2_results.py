@@ -65,8 +65,8 @@ CHI_SQUARE_1DF_MEDIAN = 0.4549364231195727
 
 BACKGROUND_COLOR = "#bdbdbd"
 SMALL_EFFECT_COLOR = "#f4a261"
-POSITIVE_COLOR = "#d95f02"
-NEGATIVE_COLOR = "#1f78b4"
+POSITIVE_COLOR = C.MASLD_PLOT_COLOR
+NEGATIVE_COLOR = C.HEALTHY_PLOT_COLOR
 PADJ_AVAILABLE_COLOR = "#4c78a8"
 PADJ_MISSING_COLOR = "#d9d9d9"
 
@@ -507,8 +507,8 @@ def plot_volcano(
             fontsize=6,
         )
 
-    axis.set_xlabel("log2 fold change")
-    axis.set_ylabel("-log10(raw p-value)")
+    axis.set_xlabel(r"$\log_2(\mathrm{FC})$")
+    axis.set_ylabel(r"$-\log_{10}(p)$")
     axis.set_title("Volcano plot")
     axis.grid(alpha=0.15)
 
@@ -625,7 +625,7 @@ def plot_ma(
     )
 
     axis.set_xlabel("log10(baseMean + 1)")
-    axis.set_ylabel("log2 fold change")
+    axis.set_ylabel(r"$\log_2(\mathrm{FC})$")
     axis.set_title("MA plot")
     axis.grid(alpha=0.15)
 
@@ -773,11 +773,11 @@ def plot_qq(
     )
 
     axis.set_xlabel(
-        "Expected -log10(p-value)"
+        r"Expected $-\log_{10}(p)$"
     )
 
     axis.set_ylabel(
-        "Observed -log10(p-value)"
+        r"Observed $-\log_{10}(p)$"
     )
 
     axis.set_title(
@@ -826,8 +826,8 @@ def create_dashboard(
             f"chromatin accessibility\n"
             f"Highlighted: padj < "
             f"{C.DESEQ2_DEFAULT_PADJ_THRESHOLD:g}, "
-            f"|log2FC| ≥ "
-            f"{C.DESEQ2_DEFAULT_ABS_LOG2FC_THRESHOLD:g}; "
+            rf"$|\log_2(\mathrm{{FC}})| \geq "
+            f"{C.DESEQ2_DEFAULT_ABS_LOG2FC_THRESHOLD:g}$; "
             f"n = {n_significant:,}"
         ),
         fontsize=14,
@@ -957,7 +957,7 @@ def create_forest_plot(
     )
 
     axis.set_xlabel(
-        "log2 fold change with 95% Wald interval"
+        r"$\log_2(\mathrm{FC})$ with 95% Wald interval"
     )
 
     axis.set_ylabel("Peak")
@@ -1432,7 +1432,7 @@ def create_direction_plot(
             "by accessibility direction\n"
             f"padj < "
             f"{C.DESEQ2_DEFAULT_PADJ_THRESHOLD:g}, "
-            f"|log2FC| ≥ "
+            rf"$|\log_2(\mathrm{{FC}})| \geq "
             f"{C.DESEQ2_DEFAULT_ABS_LOG2FC_THRESHOLD:g}"
         )
     )
@@ -1678,7 +1678,7 @@ def create_threshold_sensitivity_plot(
     labels = [
         (
             f"padj<{padj_threshold:g}\n"
-            f"|LFC|≥{effect_threshold:g}"
+            rf"$|\log_2(\mathrm{{FC}})|\geq {effect_threshold:g}$"
         )
         for (
             padj_threshold,

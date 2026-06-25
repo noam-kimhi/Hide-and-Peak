@@ -31,11 +31,11 @@ Examples
 --------
 Default mode:
 
-    python -m peaQTL.peak2gene
+    python -m peaQTL.peak_to_gene.peak2gene
 
 Soft mode:
 
-    python -m peaQTL.peak2gene --soft
+    python -m peaQTL.peak_to_gene.peak2gene --soft
 """
 
 from __future__ import annotations

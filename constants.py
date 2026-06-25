@@ -92,7 +92,7 @@ MIN_REPRODUCIBLE_SAMPLE_SUPPORT: Final[int] = 2
 
 RDS_PATH: Final[Path] = ATAC_SEQ_DIR / "GSE281367_seurat_clustered.rds.gz"
 PREPROCESS_DIR: Final[Path] = BASE_DIR / "preprocessing"
-SEURAT_INSPECTION_DIR: Final[Path] = PREPROCESS_DIR / "inspecting_seurat"
+SEURAT_INSPECTION_DIR: Final[Path] = PREPROCESS_DIR / "seurat"
 INSPECTION_DIR: Final[Path] = DERIVED_DATA_DIR / "gse281367_rds_inspection"
 INSPECTION_DIR.mkdir(parents=True, exist_ok=True)
 R_SCRIPT_PATH: Final[Path] = SEURAT_INSPECTION_DIR / "inspect_seurat_object.R"
@@ -129,6 +129,8 @@ PSEUDOBULK_SUMMARY_PATH: Final[Path] = PSEUDOBULK_OUTPUT_DIR / "pseudobulk_summa
 
 PLOTS_MAIN_COLOR: Final[str] = '#f08423'
 PLOTS_SECOND_COLOR: Final[str] = 'red'
+HEALTHY_PLOT_COLOR: Final[str] = "#076913"
+MASLD_PLOT_COLOR: Final[str] = "#BC490D"
 
 MATRIX_BINARIZATION_PLOTS_DIR: Final[Path] = PREPROCESSING_RES_DIR / "matrix_splitting" / "binarization"
 MATRIX_BINARIZATION_PLOTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -163,6 +165,12 @@ PEAK_FILTER_MIN_CELL_FRACTIONS: Final[Sequence[float]] = (
 FILTERED_CELL_TYPE_MATRICES_DIR: Final[Path] = DERIVED_DATA_DIR / "gse281367_cell_type_matrices_filtered"
 FILTERED_CELL_TYPE_MATRICES_DIR.mkdir(parents=True, exist_ok=True)
 PEAK_FILTERING_SUMMARY_PATH: Final[Path] = FILTERED_CELL_TYPE_MATRICES_DIR / "peak_filtering_summary.csv"
+
+# Legacy per-matrix eQTL overlap outputs used by create_peaks_without_eqt.py.
+EQTL_PEAK_OVERLAP_SUMMARY_PATH: Final[Path] = FILTERED_CELL_TYPE_MATRICES_DIR / "eqtl_peak_overlap_summary.csv"
+PEAKS_WITHOUT_EQT_SUFFIX: Final[str] = "_peaks_without_eqt.bed.gz"
+PEAKS_EQT_OVERLAP_SUFFIX: Final[str] = "_peaks_eqt_overlap.bed.gz"
+PEAKS_EQT_OVERLAP_ANNOTATION_SUFFIX: Final[str] = "_peaks_eqt_overlap_annotation.csv.gz"
 MIN_PEAK_FILTER_GROUP_SIZE: Final[int] = 30
 MIN_PEAK_FILTER_CELL_SUPPORT: Final[int] = 3
 MIN_PEAK_FILTER_CELL_FRACTION: Final[float] = 0.005
