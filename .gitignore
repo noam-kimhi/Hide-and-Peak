@@ -3,7 +3,6 @@
 
 # Python
 .venv/
-.venv-wsl/
 # ignore __pycache__ folders in any subdirectory
 __pycache__/
 **/__pycache__/
