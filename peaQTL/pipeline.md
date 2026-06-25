@@ -1,6 +1,6 @@
 # Hackathon CompGenomics: MASLD snATAC-seq Pipeline
 
-**Author:** Dvir Mateless & Team  
+**Author:** Dvir Mateless, Or Forshmit and Noam Kimhi  
 **Date:** June 2026  
 
 ---
