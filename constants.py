@@ -369,5 +369,6 @@ ABC_LIFTOVER_EXECUTABLE_PATH: Final[Path] = ABC_DATA_DIR / "liftOver"
 ABC_DICT_PATH: Final[Path] = ABC_DATA_DIR / "Stanford_ABC_Liver_Dictionary.csv"
 PEAK2GENE_OUTPUT_DIR: Final[Path] = PEAQTL_RESULTS_DIR / "peak2gene"
 PEAK2GENE_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+PEAK2GENE_19_OUTPUT_DIR: Final[Path] = PEAQTL_RESULTS_DIR / "peak2gene_before_hg38_fix"
 SOFT_PEAK2GENE_OUTPUT_DIR: Final[Path] = PEAQTL_RESULTS_DIR / "soft_peak2gene"
 SOFT_PEAK2GENE_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)

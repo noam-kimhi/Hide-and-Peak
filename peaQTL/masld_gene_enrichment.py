@@ -34,11 +34,13 @@ from pathlib import Path
 from typing import Final
 
 import pandas as pd
+import requests
 from scipy.stats import hypergeom, fisher_exact
 
 from constants import (
     ABC_DICT_PATH,
     PEAK2GENE_OUTPUT_DIR,
+    PEAK2GENE_19_OUTPUT_DIR,
     PEAQTL_RESULTS_DIR,
     SIGNIFICANT_PEAK_CELL_TYPES,
     SOFT_PEAK2GENE_OUTPUT_DIR,
@@ -55,90 +57,166 @@ OUTPUT_DIR: Final[Path] = PEAQTL_RESULTS_DIR / "masld_enrichment"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # ---------------------------------------------------------------------------
-# Curated MASLD/NASH-associated gene set
-# Sources: GWAS (Anstee et al. 2020, Romeo et al. 2008, Abul-Husn et al. 2018),
-#          DisGeNET (C0400966 - NAFLD), KEGG NAFLD pathway (hsa04932),
-#          key functional studies in MASLD pathogenesis.
+# Open Targets Platform API configuration
+# Disease: MASLD (MONDO_0013209)
+# https://platform.opentargets.org/disease/MONDO_0013209/associations
 # ---------------------------------------------------------------------------
 
-MASLD_GENES: Final[frozenset[str]] = frozenset({
-    # --- GWAS-validated risk loci ---
-    "PNPLA3", "TM6SF2", "MBOAT7", "GCKR", "HSD17B13",
-    "MARC1", "MTARC1", "GPAM", "APOB", "MTTP",
+OPEN_TARGETS_API_URL: Final[str] = "https://api.platform.opentargets.org/api/v4/graphql"
+MASLD_DISEASE_ID: Final[str] = "MONDO_0013209"
 
-    # --- Lipid metabolism / de novo lipogenesis ---
-    "SREBF1", "SREBF2", "FASN", "SCD", "ACACA", "ACACB",
-    "DGAT1", "DGAT2", "PPARA", "PPARG", "PPARGC1A",
-    "ACOX1", "CPT1A", "CPT2", "HMGCR", "LDLR",
-    "ABCA1", "PCSK9", "ANGPTL3", "ANGPTL4",
-    "LPIN1", "LPIN2", "AGPAT2",
+DISEASE_ASSOCIATIONS_QUERY: Final[str] = """
+query DiseaseAssociationsQuery(
+  $id: String!
+  $index: Int!
+  $size: Int!
+  $sortBy: String!
+  $enableIndirect: Boolean!
+  $datasources: [DatasourceSettingsInput!]
+) {
+  disease(efoId: $id) {
+    id
+    name
+    associatedTargets(
+      page: { index: $index, size: $size }
+      orderByScore: $sortBy
+      enableIndirect: $enableIndirect
+      datasources: $datasources
+    ) {
+      count
+      rows {
+        target {
+          approvedSymbol
+        }
+        score
+      }
+    }
+  }
+}
+"""
 
-    # --- Insulin signaling / glucose metabolism ---
-    "INSR", "IRS1", "IRS2", "PIK3CA", "AKT1", "AKT2",
-    "FOXO1", "GSK3B", "GCK", "G6PC", "PCK1", "PCK2",
-    "ADIPOQ", "ADIPOR1", "ADIPOR2", "LEP", "LEPR",
-    "IGFBP1", "IGFBPL1", "IGF1", "IGF1R",
+DATASOURCES: Final[list[dict]] = [
+    {"id": "clinical_precedence", "weight": 1, "propagate": True, "required": False},
+    {"id": "gwas_credible_sets", "weight": 1, "propagate": True, "required": False},
+    {"id": "gene_burden", "weight": 1, "propagate": True, "required": False},
+    {"id": "eva", "weight": 1, "propagate": True, "required": False},
+    {"id": "genomics_england", "weight": 1, "propagate": True, "required": False},
+    {"id": "gene2phenotype", "weight": 1, "propagate": True, "required": False},
+    {"id": "uniprot_literature", "weight": 1, "propagate": True, "required": False},
+    {"id": "uniprot_variants", "weight": 1, "propagate": True, "required": False},
+    {"id": "orphanet", "weight": 1, "propagate": True, "required": False},
+    {"id": "clingen", "weight": 1, "propagate": True, "required": False},
+    {"id": "cancer_gene_census", "weight": 1, "propagate": True, "required": False},
+    {"id": "intogen", "weight": 1, "propagate": True, "required": False},
+    {"id": "eva_somatic", "weight": 1, "propagate": True, "required": False},
+    {"id": "cancer_biomarkers", "weight": 1, "propagate": True, "required": False},
+    {"id": "crispr_screen", "weight": 1, "propagate": True, "required": False},
+    {"id": "crispr", "weight": 1, "propagate": True, "required": False},
+    {"id": "reactome", "weight": 1, "propagate": True, "required": False},
+    {"id": "europepmc", "weight": 0.2, "propagate": True, "required": False},
+    {"id": "expression_atlas", "weight": 0.2, "propagate": False, "required": False},
+    {"id": "impc", "weight": 0.2, "propagate": True, "required": False},
+    {"id": "ot_crispr_validation", "weight": 0.5, "propagate": True, "required": False},
+    {"id": "ot_crispr", "weight": 0.5, "propagate": True, "required": False},
+    {"id": "encore", "weight": 0.5, "propagate": True, "required": False},
+]
 
-    # --- Inflammation / innate immunity ---
-    "TNF", "TNFRSF1A", "IL6", "IL6R", "IL1B", "IL1R1",
-    "IL18", "NLRP3", "CASP1", "CCL2", "CCR2",
-    "TGFB1", "TGFBR1", "TGFBR2", "SMAD2", "SMAD3", "SMAD4",
-    "NFKB1", "RELA", "IKBKB", "TOLLIP", "TLR4", "TLR2",
-    "CD14", "CD68", "MARCO", "CLEC4F",
 
-    # --- Oxidative stress / mitochondrial dysfunction ---
-    "SOD1", "SOD2", "CAT", "GPX1", "NRF2", "NFE2L2", "KEAP1",
-    "OPA1", "MFN1", "MFN2", "DNM1L", "FIS1",
-    "CYCS", "BAX", "BCL2", "CASP3", "CASP9",
-    "CYP2E1", "CYP4A11",
+def fetch_masld_genes_from_open_targets(
+    min_score: float = 0.0,
+) -> frozenset[str]:
+    """Fetch MASLD-associated genes from the Open Targets Platform API.
 
-    # --- Fibrosis / stellate cell activation ---
-    "COL1A1", "COL1A2", "COL3A1", "COL4A1",
-    "ACTA2", "TIMP1", "TIMP2", "MMP2", "MMP9", "MMP13",
-    "LOX", "LOXL2", "CTGF", "CCN2",
-    "PDGFA", "PDGFB", "PDGFRA", "PDGFRB",
-    "WNT2", "WNT3A", "CTNNB1",
-    "PIEZO1", "PIEZO2",
+    Queries all associated targets for MONDO_0013209 (MASLD) and returns
+    their approved gene symbols.
 
-    # --- Notch / Hedgehog signaling (biliary/Kupffer) ---
-    "NOTCH1", "NOTCH2", "JAG1", "JAG2", "DLL1", "DLL4",
-    "HES1", "HEY1", "RBPJ",
-    "SHH", "IHH", "SMO", "GLI1", "GLI2",
+    Parameters
+    ----------
+    min_score : float
+        Minimum overall association score to include a gene (default 0.0 = all).
 
-    # --- Apoptosis / cell death (hepatocyte ballooning) ---
-    "RIPK1", "RIPK3", "MLKL", "FADD", "FAS", "TRAIL",
-    "PARP1", "HMGB1",
+    Returns
+    -------
+    frozenset of gene symbols associated with MASLD.
+    """
+    all_genes: list[str] = []
+    page_size = 500
+    page_index = 0
 
-    # --- Bile acid metabolism ---
-    "CYP7A1", "CYP27A1", "NR1H4", "FXR", "ABCB11",
-    "SLC10A1", "NTCP",
+    logger.info(
+        "Fetching MASLD-associated genes from Open Targets Platform "
+        "(disease: %s)...",
+        MASLD_DISEASE_ID,
+    )
 
-    # --- Vascular remodeling / angiogenesis ---
-    "VEGFA", "VEGFB", "KDR", "FLT1",
-    "PECAM1", "VWF", "NOS3", "EDN1",
-    "SEMA3C", "SEMA3A", "NRP1", "PLXNA1",
+    while True:
+        variables = {
+            "id": MASLD_DISEASE_ID,
+            "index": page_index,
+            "size": page_size,
+            "sortBy": "score",
+            "enableIndirect": True,
+            "datasources": DATASOURCES,
+        }
 
-    # --- Iron metabolism (relevant in NASH) ---
-    "HFE", "TFR2", "HAMP", "SLC40A1", "FTH1", "FTL",
+        response = requests.post(
+            OPEN_TARGETS_API_URL,
+            json={"query": DISEASE_ASSOCIATIONS_QUERY, "variables": variables},
+            timeout=60,
+        )
+        response.raise_for_status()
+        data = response.json()
 
-    # --- Epigenetic regulators implicated in MASLD ---
-    "HDAC1", "HDAC3", "SIRT1", "DNMT1", "TET2",
+        disease_data = data.get("data", {}).get("disease")
+        if disease_data is None:
+            raise ValueError(
+                f"No data returned for disease ID: {MASLD_DISEASE_ID}"
+            )
 
-    # --- Platelet / coagulation (NASH-associated) ---
-    "GP5", "GP1BA", "THBS1", "F2", "SERPINE1",
+        assoc = disease_data["associatedTargets"]
+        total_count = assoc["count"]
+        rows = assoc["rows"]
 
-    # --- Amino acid / one-carbon metabolism ---
-    "MTHFR", "MAT1A", "BHMT", "CBS", "GNMT",
+        if not rows:
+            break
 
-    # --- Autophagy ---
-    "BECN1", "ATG5", "ATG7", "MAP1LC3B", "SQSTM1",
+        genes_before = len(all_genes)
+        for row in rows:
+            score = row.get("score", 0.0)
+            if score >= min_score:
+                symbol = row["target"]["approvedSymbol"]
+                if symbol:
+                    all_genes.append(symbol)
+        genes_added = len(all_genes) - genes_before
 
-    # --- Other validated MASLD-associated genes ---
-    "SAMM50", "ERLIN1", "LYPLAL1", "PPP1R3B",
-    "SOX9", "KRT19", "KRT7", "EPCAM",
-    "CRP", "SAA1", "HP", "ORM1",
-    "AOAH", "RND1",
-})
+        logger.info(
+            "  Fetched page %d (%d genes so far / %d total, +%d this page)",
+            page_index,
+            len(all_genes),
+            total_count,
+            genes_added,
+        )
+
+        # Results are sorted by score descending, so if no genes passed
+        # the min_score filter on this page, no future page will either.
+        if genes_added == 0 and min_score > 0:
+            logger.info(
+                "  Stopping early: remaining genes score below %.2f",
+                min_score,
+            )
+            break
+
+        page_index += 1
+        if page_index * page_size >= total_count:
+            break
+
+    genes = frozenset(all_genes)
+    logger.info(
+        "Retrieved %d MASLD-associated genes from Open Targets (score >= %.2f)",
+        len(genes),
+        min_score,
+    )
+    return genes
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -150,6 +228,9 @@ def parse_arguments() -> argparse.Namespace:
         "--soft",
         action="store_true",
         help="Use soft-filtered peak2gene results.",
+    )
+    parser.add_argument(
+        "--old", action="store_true", help="Use old peak2gene results (before hg38 fix)."
     )
     return parser.parse_args()
 
@@ -310,18 +391,26 @@ def main() -> None:
         input_dir = PEAK2GENE_OUTPUT_DIR
         mode_label = "default"
 
+    if args.old:
+        input_dir = PEAK2GENE_19_OUTPUT_DIR
+        mode_label = "old"
+
     logger.info("Mode: %s", mode_label)
     logger.info("Input directory: %s", input_dir)
+
+    # Fetch MASLD-associated genes from Open Targets Platform
+    # Filter out genes with association score < 0.05 (minimal evidence threshold)
+    masld_genes = fetch_masld_genes_from_open_targets(min_score=0.05)
 
     # Load background
     background_genes = load_background_genes(ABC_DICT_PATH)
     logger.info("ABC liver background: %d unique genes", len(background_genes))
 
     # Report MASLD gene coverage in background
-    masld_in_bg = MASLD_GENES & background_genes
+    masld_in_bg = masld_genes & background_genes
     logger.info(
-        "MASLD curated set: %d genes (%d present in background)",
-        len(MASLD_GENES),
+        "MASLD gene set (Open Targets): %d genes (%d present in background)",
+        len(masld_genes),
         len(masld_in_bg),
     )
 
@@ -337,7 +426,7 @@ def main() -> None:
         result = run_hypergeometric_test(
             discovered_genes=discovered,
             background_genes=background_genes,
-            masld_genes=MASLD_GENES,
+            masld_genes=masld_genes,
         )
 
         print_result(cell_type, result)
@@ -359,7 +448,7 @@ def main() -> None:
     combined_result = run_hypergeometric_test(
         discovered_genes=all_discovered,
         background_genes=background_genes,
-        masld_genes=MASLD_GENES,
+        masld_genes=masld_genes,
     )
     print_result("ALL_COMBINED", combined_result)
 
