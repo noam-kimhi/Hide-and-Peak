@@ -114,13 +114,13 @@
 
   \subsection{Objectives}\label{subsec:objectives}
   \begin{itemize}[noitemsep, topsep=0pt]
-    \item Process snATAC-seq peak-count matrices from healthy and MASH liver samples.
-    \item Create a shared consensus peak coordinate system across samples.
-    \item Split accessibility matrices by annotated cell type and aggregate them into pseudobulk profiles.
-    \item Identify differentially accessible peaks between healthy and MASH samples using DESeq2.
-    \item Remove peaks overlapping significant GTEx liver eQTL variants.
-    \item Map the remaining peaks to candidate target genes using Activity-by-Contact (ABC) predictions.
-    \item Interpret top candidate genes using external biological evidence.
+    \item Process snATAC-seq peak-count matrices from healthy and MASH liver samples
+    \item Create a shared consensus peak coordinate system across samples
+    \item Split accessibility matrices by annotated cell type and aggregate them into pseudobulk profiles
+    \item Identify differentially accessible peaks between healthy and MASH samples using DESeq2
+    \item Remove peaks overlapping significant GTEx liver eQTL variants
+    \item Map the remaining peaks to candidate target genes using Activity-by-Contact (ABC) predictions
+    \item Interpret top candidate genes using external biological evidence
   \end{itemize}
 
   \section{Data}
@@ -139,7 +139,7 @@
 
   Across the raw sample summaries, the MASH samples contained 78,124 cells and the healthy samples contained 57,067 cells.
   Median cells per sample were 11,988 for MASH and 9,296 for healthy samples.
-  The sample-level peak sets varied substantially in size and boundary definitions, which motivated the consensus-peak construction described in \cref{sec:methods}.
+  The sample-level peak sets varied substantially in size and boundary definitions, which motivated the consensus-peak construction described in \cref{subsec:consensus-peak-construction}.
 
   The analysis considered seven annotated cell-type groups: cholangiocytes, endothelial cells, hepatocytes, Kupffer cells, stellate cells, T/NK/B cells, and unknown cells.
   Pseudobulk matrices were generated separately for each cell type, each over the same reproducible consensus peak universe of 206,989 peaks.
