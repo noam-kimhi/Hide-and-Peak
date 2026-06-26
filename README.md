@@ -6,6 +6,10 @@
 
 This project was developed by [Or Forshmit](https://github.com/OrF8), [Dvir Mateless](https://github.com/Dvirmat), and [Noam Kimhi](https://github.com/noam-kimhi) for **76553 – Computational Genomics** at the **Hebrew University of Jerusalem**, as part of the course's liver-genomics hackathon.
 
+Full paper available [here](LaTeX/Hide%20and%20Peak%20-%20identifying%20MASLD-associated%20regulatory%20genes%20from%20cell-type%20chromatin%20accessibility.pdf).
+
+> 🎓 Final Grade: **TBD**
+
 <p align="center">
   <img alt="Python 3.9.13" src="https://img.shields.io/badge/Python-3.9.13-3776AB?style=flat-square&logo=python&logoColor=white">
   <img alt="pandas 2.3.3" src="https://img.shields.io/badge/pandas-2.3.3-150458?style=flat-square&logo=pandas&logoColor=white">
