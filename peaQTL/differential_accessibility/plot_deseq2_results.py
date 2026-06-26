@@ -1432,9 +1432,10 @@ def create_direction_plot(
             "by accessibility direction\n"
             f"padj < "
             f"{C.DESEQ2_DEFAULT_PADJ_THRESHOLD:g}, "
-            rf"$|\log_2(\mathrm{{FC}})| \geq "
+            rf"$|\log_2(\mathrm{{FC}})| \geq $"
             f"{C.DESEQ2_DEFAULT_ABS_LOG2FC_THRESHOLD:g}"
-        )
+        ),
+        fontweight="bold"
     )
 
     axis.legend(

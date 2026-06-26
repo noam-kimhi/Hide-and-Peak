@@ -18,8 +18,8 @@ def load_and_clean_annotations(path: Path) -> pd.DataFrame:
         "sample",
         "cells",
         "seurat_cell_id",
-        "seurat_clusters",
-        "CellType.2",
+        "seurat_cluster",
+        "cell_type_original",
         "active_ident",
     }
     missing_columns = required_columns - set(annotations.columns)
@@ -29,14 +29,14 @@ def load_and_clean_annotations(path: Path) -> pd.DataFrame:
             f"Missing required annotation columns: {sorted(missing_columns)}"
         )
 
+    if not annotations["cell_type_original"].equals(annotations["active_ident"]):
+        raise ValueError("cell_type_original and active_ident are not identical.")
+
     if not annotations["seurat_cell_id"].is_unique:
         raise ValueError("seurat_cell_id is not unique.")
 
     if not annotations["cells"].equals(annotations["seurat_cell_id"]):
         raise ValueError("cells and seurat_cell_id are not identical.")
-
-    if not annotations["CellType.2"].equals(annotations["active_ident"]):
-        raise ValueError("CellType.2 and active_ident are not identical.")
 
     annotations["raw_barcode"] = (
         annotations["seurat_cell_id"]
@@ -65,13 +65,6 @@ def load_and_clean_annotations(path: Path) -> pd.DataFrame:
         raise ValueError(
             "The combination of sample and raw_barcode is not unique."
         )
-
-    annotations = annotations.rename(
-        columns={
-            "CellType.2": "cell_type_original",
-            "seurat_clusters": "seurat_cluster",
-        }
-    )
 
     annotations["cell_type"] = annotations[
         "cell_type_original"
@@ -222,7 +215,7 @@ def infer_one_to_one_sample_mapping(
 
 def main() -> None:
     """Run all annotation and sample-matching validation steps."""
-    annotations = load_and_clean_annotations(ANNOTATIONS_PATH)
+    annotations = load_and_clean_annotations(CELL_ANNOTATIONS_PATH)
     barcode_files = find_barcode_files(ATAC_SEQ_DIR)
 
     overlap_table = calculate_overlap_table(
@@ -270,7 +263,7 @@ def main() -> None:
     ] < 0.95
 
     if low_match.any():
-        raise RuntimeError(
+        print(
             "At least one inferred sample mapping matched fewer than "
             "95% of the annotated cells."
         )

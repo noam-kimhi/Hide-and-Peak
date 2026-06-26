@@ -25,7 +25,6 @@ from constants import (
     CONDITION_QC_OUTPUT_PATH,
     EXPECTED_SAMPLE_COUNT,
     EXPECTED_SAMPLES_PER_CONDITION,
-    FRAGMENTS_SUFFIX,
     HEALTHY_KEYWORDS,
     MASLD_KEYWORDS,
     MATRIX_SUFFIX,
@@ -45,8 +44,6 @@ class SampleFiles:
     barcodes_path: Path
     peaks_path: Path
     matrix_path: Path
-    fragments_path: Path
-    fragments_index_path: Path
 
 
 def find_single_file(sample_dir: Path, suffix: str) -> Path:
@@ -96,23 +93,12 @@ def collect_sample_files(sample_dir: Path) -> SampleFiles:
     sample_dir = Path(sample_dir)
     sample_id = sample_dir.name
 
-    fragments_path = find_single_file(sample_dir, FRAGMENTS_SUFFIX)
-    fragments_index_path = Path(f"{fragments_path}.tbi")
-
-    if not fragments_index_path.exists():
-        raise FileNotFoundError(
-            f"Missing Tabix index for {sample_id}: "
-            f"{fragments_index_path}"
-        )
-
     return SampleFiles(
         sample_dir=sample_dir,
         sample_id=sample_id,
         barcodes_path=find_single_file(sample_dir, BARCODES_SUFFIX),
         peaks_path=find_single_file(sample_dir, PEAKS_SUFFIX),
         matrix_path=find_single_file(sample_dir, MATRIX_SUFFIX),
-        fragments_path=fragments_path,
-        fragments_index_path=fragments_index_path,
     )
 
 
@@ -583,20 +569,9 @@ def summarize_sample(sample_files: SampleFiles) -> dict[str, object]:
             sample_files.matrix_path.stat().st_size
             / (1024**2)
         ),
-        "fragments_file_size_mib": (
-            sample_files.fragments_path.stat().st_size
-            / (1024**2)
-        ),
-        "fragments_index_exists": (
-            sample_files.fragments_index_path.exists()
-        ),
         "barcodes_path": sample_files.barcodes_path.name,
         "peaks_path": sample_files.peaks_path.name,
         "matrix_path": sample_files.matrix_path.name,
-        "fragments_path": sample_files.fragments_path.name,
-        "fragments_index_path": (
-            sample_files.fragments_index_path.name
-        ),
     }
 
     result.update(

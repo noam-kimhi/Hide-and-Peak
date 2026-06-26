@@ -30,6 +30,7 @@ from constants import (
     ABC_HG19_TO_HG38_CHAIN_PATH,
     ABC_LIFTOVER_EXECUTABLE_PATH,
     ABC_PRED_FILE,
+    ABC_DATA_DIR
 )
 
 logging.basicConfig(
@@ -246,7 +247,7 @@ def apply_lifted_coordinates(
     predictions: pd.DataFrame,
     intervals: pd.DataFrame,
     lifted_coordinates: pd.DataFrame,
-) -> pd.DataFrame:
+) -> tuple[pd.DataFrame, dict[str, float]]:
     """Replace hg19 coordinates with their unambiguous hg38 mappings.
 
     Rows whose enhancer interval could not be lifted are excluded. Their
@@ -319,6 +320,20 @@ def apply_lifted_coordinates(
     total_unique_intervals = len(intervals)
     mapped_rows = len(lifted_predictions)
     total_rows = len(predictions)
+
+    stats = {
+        "mapped_unique_intervals": mapped_unique_intervals,
+        "total_unique_intervals": total_unique_intervals,
+        "unique_intervals_mapping_rate": (
+            mapped_unique_intervals / total_unique_intervals if total_unique_intervals > 0 else 0.0
+        ),
+        "mapped_rows": mapped_rows,
+        "total_rows": total_rows,
+        "rows_mapping_rate": (
+            mapped_rows / total_rows if total_rows > 0 else 0.0
+        ),
+    }
+
     LOGGER.info(
         "liftOver mapped %d/%d unique intervals (%.2f%%).",
         mapped_unique_intervals,
@@ -331,10 +346,10 @@ def apply_lifted_coordinates(
         total_rows,
         100.0 * mapped_rows / total_rows,
     )
-    return lifted_predictions
+    return lifted_predictions, stats
 
 
-def lift_abc_predictions_to_hg38(predictions: pd.DataFrame) -> pd.DataFrame:
+def lift_abc_predictions_to_hg38(predictions: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, float]]:
     """Lift all unique ABC enhancer intervals from hg19 to hg38.
 
     :param predictions: Validated ABC prediction rows in hg19 coordinates.
@@ -446,11 +461,22 @@ def save_abc_dictionary(predictions: pd.DataFrame, path: Path) -> None:
     LOGGER.info("ABC preprocessing completed successfully.")
 
 
+def save_stats(stats: dict[str, float]) -> None:
+    """
+    Saves the stats as a .csv.
+    :param stats: Statistics about the lift.
+    """
+    stats_path = ABC_DATA_DIR / "abc_liftover_stats.csv"
+    stats_df = pd.DataFrame([stats])
+    stats_df.to_csv(stats_path, index=False)
+    LOGGER.info("Saved liftOver statistics to: %s", stats_path)
+
+
 def main() -> None:
     """Lift ABC predictions to hg38 and create the liver dictionary."""
     predictions = load_abc_predictions(ABC_PRED_FILE)
     predictions = validate_abc_coordinates(predictions)
-    lifted_predictions = lift_abc_predictions_to_hg38(predictions)
+    lifted_predictions, stats = lift_abc_predictions_to_hg38(predictions)
     save_lifted_predictions(lifted_predictions, ABC_38_PRED_FILE)
 
     liver_predictions = filter_liver_cell_types(lifted_predictions)
@@ -458,6 +484,7 @@ def main() -> None:
     liver_predictions = rename_columns_for_bioframe(liver_predictions)
     save_abc_dictionary(liver_predictions, ABC_DICT_PATH)
 
+    save_stats(stats)
 
 if __name__ == "__main__":
     main()

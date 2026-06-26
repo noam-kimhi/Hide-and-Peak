@@ -1,3 +1,4 @@
+# Usage: Rscript preprocessing/seurat/inspect_seurat_object.R <path_to_seurat_object.rds> <output_directory>
 
 args <- commandArgs(trailingOnly = TRUE)
 

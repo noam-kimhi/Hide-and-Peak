@@ -12,7 +12,7 @@ Outputs
 
 import sys
 import pandas as pd
-from constants import ANNOTATIONS_PATH, ANNOTATION_DIR
+from constants import CELL_ANNOTATIONS_PATH, ANNOTATION_DIR
 
 # Values that represent the absence of a real cell-type label.
 UNANNOTATED_VALUES: frozenset[str] = frozenset({"Unknow", "Unknown", ""})

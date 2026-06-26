@@ -63,7 +63,6 @@ CONDITION_QC_OUTPUT_PATH: Final[Path] = DERIVED_DATA_DIR / "condition_qc_summary
 BARCODES_SUFFIX: Final[str] = "_barcodes.tsv.gz"
 PEAKS_SUFFIX: Final[str] = "_peaks.bed.gz"
 MATRIX_SUFFIX: Final[str] = "_matrix.mtx.gz"
-FRAGMENTS_SUFFIX: Final[str] = "_fragments.tsv.gz"
 
 EXPECTED_SAMPLE_COUNT: Final[int] = 12
 EXPECTED_SAMPLES_PER_CONDITION: Final[dict[str, int]] = {
@@ -97,7 +96,6 @@ INSPECTION_DIR: Final[Path] = DERIVED_DATA_DIR / "gse281367_rds_inspection"
 INSPECTION_DIR.mkdir(parents=True, exist_ok=True)
 R_SCRIPT_PATH: Final[Path] = SEURAT_INSPECTION_DIR / "inspect_seurat_object.R"
 SEURAT_METADATA_PATH: Final[Path] = INSPECTION_DIR / "GSE281367_cell_metadata.csv.gz"
-ANNOTATIONS_PATH: Final[Path] = INSPECTION_DIR / "GSE281367_cell_annotations.csv.gz"
 ANNOTATION_DIR: Final[Path] = INSPECTION_DIR / "gse281367_annotations"
 ANNOTATION_DIR.mkdir(parents=True, exist_ok=True)
 CELL_ANNOTATIONS_PATH: Final[Path] = ANNOTATION_DIR / "GSE281367_cell_annotations.csv.gz"
@@ -161,19 +159,6 @@ PEAK_FILTER_MIN_CELL_FRACTIONS: Final[Sequence[float]] = (
     0.02,
     0.05,
 )
-
-FILTERED_CELL_TYPE_MATRICES_DIR: Final[Path] = DERIVED_DATA_DIR / "gse281367_cell_type_matrices_filtered"
-FILTERED_CELL_TYPE_MATRICES_DIR.mkdir(parents=True, exist_ok=True)
-PEAK_FILTERING_SUMMARY_PATH: Final[Path] = FILTERED_CELL_TYPE_MATRICES_DIR / "peak_filtering_summary.csv"
-
-# Legacy per-matrix eQTL overlap outputs used by create_peaks_without_eqt.py.
-EQTL_PEAK_OVERLAP_SUMMARY_PATH: Final[Path] = FILTERED_CELL_TYPE_MATRICES_DIR / "eqtl_peak_overlap_summary.csv"
-PEAKS_WITHOUT_EQT_SUFFIX: Final[str] = "_peaks_without_eqt.bed.gz"
-PEAKS_EQT_OVERLAP_SUFFIX: Final[str] = "_peaks_eqt_overlap.bed.gz"
-PEAKS_EQT_OVERLAP_ANNOTATION_SUFFIX: Final[str] = "_peaks_eqt_overlap_annotation.csv.gz"
-MIN_PEAK_FILTER_GROUP_SIZE: Final[int] = 30
-MIN_PEAK_FILTER_CELL_SUPPORT: Final[int] = 3
-MIN_PEAK_FILTER_CELL_FRACTION: Final[float] = 0.005
 
 SIG_PEAKS_DIR: Final[Path] = DERIVED_DATA_DIR / "significant_peaks"
 SIG_PEAKS_DIR.mkdir(parents=True, exist_ok=True)
