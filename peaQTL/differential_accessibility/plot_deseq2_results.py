@@ -1428,7 +1428,7 @@ def create_direction_plot(
 
     axis.set_title(
         (
-            "Significant differential peaks "
+            "Differential Active Peaks (DAPs) "
             "by accessibility direction\n"
             f"padj < "
             f"{C.DESEQ2_DEFAULT_PADJ_THRESHOLD:g}, "
