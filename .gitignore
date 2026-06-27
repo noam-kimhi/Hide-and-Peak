@@ -8,7 +8,7 @@ __pycache__/
 **/__pycache__/
 
 # Too big data files
-# Download from `https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE281367` -- NOT AVAILABLE in Hillel's data.
+# Download from `https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE281367`
 data/snatac_gse281367/GSE281367_seurat_clustered.rds.gz
 
 # LaTeX compilation files
