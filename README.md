@@ -282,13 +282,13 @@ Hide-and-Peak/
 
 ### Prerequisites
 
-- No supported Python version is declared in package metadata. The committed virtual environment metadata records Python `3.9.13`, and the pinned dependencies were installed in that environment.
+- Python $\geq$ 3.9
 - `pip`
-- R with Seurat only if re-extracting metadata from the Seurat object.
-- UCSC `liftOver` executable for rebuilding the ABC hg38 dictionary. A `liftOver` executable is present under `data/ABC/`.
-- Substantial storage for raw and derived single-nucleus matrices. The tracked `data/` and `results/` directories include large compressed matrices and prediction files.
+- R with `Seurat` and `Signac` only if re-extracting metadata from the Seurat object
+- UCSC `liftOver` executable for rebuilding the ABC hg38 dictionary. A `liftOver` executable is present under `data/ABC/`
+- Substantial storage for raw and derived single-nucleus matrices. The tracked `data/` and `results/` directories include large compressed matrices and prediction files
 
-No `pyproject.toml` is present. Dependencies are pinned in `requirements.txt`.
+Dependencies are pinned in `requirements.txt`.
 
 ### Installation
 
@@ -340,8 +340,6 @@ data/snatac_gse281367/
 │   └── GSM8619363_MASH_rep1_peaks.bed.gz
 └── ...
 ```
-
-Do not place the Nature Genetics paper PDF or copyrighted supplementary files in this repository unless their terms explicitly allow redistribution.
 
 ---
 
@@ -467,7 +465,7 @@ The result numbers below are taken from committed CSV files.
 From `results/peaQTL/differential_peaks/differential_peaks_summary.csv`:
 
 | Cell type     | Peaks tested | padj < 0.05 | padj < 0.01 | More accessible in MASLD | More accessible in healthy |
-|---------------|-------------:|------------:|------------:|-------------------------:|---------------------------:|
+|---------------|:------------:|:-----------:|:-----------:|:------------------------:|:--------------------------:|
 | Cholangiocyte |      140,349 |           1 |           1 |                        1 |                          0 |
 | Endothelial   |      154,991 |          44 |          10 |                       12 |                         32 |
 | Hepatocytes   |      181,149 |          15 |           1 |                        7 |                          8 |
@@ -481,7 +479,7 @@ From `results/peaQTL/differential_peaks/differential_peaks_summary.csv`:
 From `data/derived/significant_peaks/filtered_significant_peaks/significant_peaks_eqtl_filtering_summary.csv`:
 
 | Cell type     | Strict significant peaks | Removed by liver eQTL overlap | Remaining after eQTL filtering |
-|---------------|-------------------------:|------------------------------:|-------------------------------:|
+|---------------|:------------------------:|:-----------------------------:|:------------------------------:|
 | Cholangiocyte |                        1 |                             0 |                              1 |
 | Endothelial   |                       34 |                             7 |                             27 |
 | Hepatocytes   |                       12 |                             2 |                             10 |
@@ -501,7 +499,7 @@ Across all cell types, 89 high-confidence significant peaks remained after remov
 From `results/peaQTL/peak2gene/peak2gene_mapping_summary.csv`:
 
 | Cell type     | Peaks after eQTL filtering | ABC-mapped peaks | Mapped peak percent | Peak–gene pairs |
-|---------------|---------------------------:|-----------------:|--------------------:|----------------:|
+|---------------|:--------------------------:|:----------------:|:-------------------:|:---------------:|
 | Cholangiocyte |                          1 |                1 |             100.00% |               1 |
 | Endothelial   |                         27 |                9 |              33.33% |              21 |
 | Hepatocytes   |                         10 |                1 |              10.00% |               1 |
@@ -521,7 +519,7 @@ Overall, 28 of 89 non-eQTL-overlapping significant peaks were mapped by ABC, pro
 These are repository findings, not causal claims. The table lists selected non-eQTL-overlapping peaks linked to candidate target genes by ABC.
 
 | Cell type   | Peak coordinates          | Direction                  | Candidate gene    | ABC score | DESeq2 log2FC |            padj |
-|-------------|---------------------------|----------------------------|-------------------|----------:|--------------:|----------------:|
+|-------------|---------------------------|----------------------------|-------------------|:---------:|:-------------:|:---------------:|
 | Kupffer     | `chr7:24756018-24758867`  | More accessible in MASLD   | *DFNA5* / *GSDME* |  0.462342 |      2.330107 |  0.007165970422 |
 | Kupffer     | `chr13:41455801-41460317` | More accessible in MASLD   | *RGCC*            |  0.216315 |      2.426668 | 0.0000232056968 |
 | Kupffer     | `chr1:26936216-26939838`  | More accessible in healthy | *NR0B2* / SHP     |  0.020224 |     -1.859280 | 0.0004657199137 |
@@ -563,7 +561,7 @@ The strongest conclusion is that non-eQTL-overlapping differential chromatin acc
 
 | Technology or resource       | Verified role                                                             |
 |------------------------------|---------------------------------------------------------------------------|
-| Python 3.9.13                | Local virtual environment recorded in `.venv/pyvenv.cfg`                  |
+| Python 3.9.13                | Local virtual environment                 |
 | pandas 2.3.3                 | CSV, BED-like, metadata, and summary table processing                     |
 | NumPy 2.0.2                  | Numeric operations and sample-support calculations                        |
 | SciPy 1.13.1                 | Sparse Matrix Market reading and statistical helpers                      |
